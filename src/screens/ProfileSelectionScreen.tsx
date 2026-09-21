@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Modal,
   TextInput,
   Alert,
   Platform,
-} from 'react-native';
-import { UserProfile } from '../types/auth';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { UserProfile } from "../types/auth";
 
 interface ProfileSelectionScreenProps {
   userEmail: string;
@@ -28,23 +28,27 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
   onAddProfileRequest,
   onSignOut,
 }) => {
-  const [selectedParentProfile, setSelectedParentProfile] = useState<UserProfile | null>(null);
+  const [selectedParentProfile, setSelectedParentProfile] =
+    useState<UserProfile | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleProfileClick = (profile: UserProfile) => {
     if (isEditMode) {
-      Alert.alert('Chỉnh sửa Hồ sơ', `Chỉnh sửa thông tin của: ${profile.name}`);
+      Alert.alert(
+        "Chỉnh sửa Hồ sơ",
+        `Chỉnh sửa thông tin của: ${profile.name}`,
+      );
       return;
     }
 
-    if (profile.role === 'parent') {
+    if (profile.role === "parent") {
       // Open PIN verification modal for parent profile
       setSelectedParentProfile(profile);
-      setPinInput('');
-      setPinError('');
+      setPinInput("");
+      setPinError("");
       setPinModalVisible(true);
     } else {
       // Directly select student profile
@@ -54,13 +58,13 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
 
   const handleVerifyPin = () => {
     if (!selectedParentProfile) return;
-    const requiredPin = selectedParentProfile.pinCode || '1234';
+    const requiredPin = selectedParentProfile.pinCode || "1234";
 
     if (pinInput === requiredPin) {
       setPinModalVisible(false);
       onSelectProfile(selectedParentProfile);
     } else {
-      setPinError('Mã PIN không đúng!Vui lòng thử lại (Gợi ý: 1234)');
+      setPinError("Mã PIN không đúng!Vui lòng thử lại (Gợi ý: 1234)");
     }
   };
 
@@ -80,7 +84,7 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
           onPress={() => setIsEditMode(!isEditMode)}
         >
           <Text style={styles.editBtnText}>
-            {isEditMode ? 'Xong' : 'Quản lý hồ sơ'}
+            {isEditMode ? "Xong" : "Quản lý hồ sơ"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -107,14 +111,14 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
                 <Text style={styles.avatarEmoji}>{profile.avatarIcon}</Text>
 
                 {/* Parent Lock Badge */}
-                {profile.role === 'parent' && (
+                {profile.role === "parent" && (
                   <View style={styles.parentBadge}>
                     <Text style={styles.parentBadgeText}>🔒 PHỤ HUYNH</Text>
                   </View>
                 )}
 
                 {/* Grade Badge for kids */}
-                {profile.role === 'child' && profile.grade && (
+                {profile.role === "child" && profile.grade && (
                   <View style={styles.gradeBadge}>
                     <Text style={styles.gradeBadgeText}>{profile.grade}</Text>
                   </View>
@@ -180,7 +184,7 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
               value={pinInput}
               onChangeText={(text) => {
                 setPinInput(text);
-                setPinError('');
+                setPinError("");
               }}
               placeholder="• • • •"
               placeholderTextColor="#666"
@@ -214,74 +218,74 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#141414',
+    backgroundColor: "#141414",
   },
   navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
   logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   logoText: {
-    color: '#E50914',
+    color: "#E50914",
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.5,
   },
   mathBadge: {
-    backgroundColor: '#FFD700',
+    backgroundColor: "#FFD700",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 6,
   },
   mathBadgeText: {
-    color: '#000000',
+    color: "#000000",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   editBtn: {
     borderWidth: 1,
-    borderColor: '#737373',
+    borderColor: "#737373",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
   },
   editBtnText: {
-    color: '#E5E5E5',
+    color: "#E5E5E5",
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   scrollContent: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 30,
     paddingBottom: 40,
     paddingHorizontal: 16,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 34,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
   },
   accountSubText: {
-    color: '#8C8C8C',
+    color: "#8C8C8C",
     fontSize: 14,
     marginBottom: 36,
   },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     maxWidth: 500,
   },
   profileCard: {
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 14,
     marginBottom: 28,
     width: 110,
@@ -290,75 +294,75 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#000',
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 6,
   },
   addAvatarBox: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: '#404040',
-    borderStyle: 'dashed',
+    borderColor: "#404040",
+    borderStyle: "dashed",
   },
   avatarEmoji: {
     fontSize: 48,
   },
   plusIcon: {
-    color: '#737373',
+    color: "#737373",
     fontSize: 42,
-    fontWeight: '300',
+    fontWeight: "300",
   },
   parentBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -8,
-    backgroundColor: '#312E81',
+    backgroundColor: "#312E81",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#6366F1',
+    borderColor: "#6366F1",
   },
   parentBadgeText: {
-    color: '#EEF2FF',
+    color: "#EEF2FF",
     fontSize: 9,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   gradeBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -8,
-    backgroundColor: '#065F46',
+    backgroundColor: "#065F46",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: "#10B981",
   },
   gradeBadgeText: {
-    color: '#ECFDF5',
+    color: "#ECFDF5",
     fontSize: 9,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   editOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   editOverlayText: {
     fontSize: 28,
   },
   profileName: {
-    color: '#8C8C8C',
+    color: "#8C8C8C",
     fontSize: 14,
     marginTop: 14,
-    textAlign: 'center',
-    fontWeight: '500',
+    textAlign: "center",
+    fontWeight: "500",
   },
   signOutBtn: {
     marginTop: 30,
@@ -366,94 +370,94 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   signOutText: {
-    color: '#737373',
+    color: "#737373",
     fontSize: 14,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#1F1F1F',
+    backgroundColor: "#1F1F1F",
     borderRadius: 16,
     padding: 24,
-    width: '100%',
+    width: "100%",
     maxWidth: 340,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
   modalLockEmoji: {
     fontSize: 40,
     marginBottom: 10,
   },
   modalTitle: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
   },
   modalSubtitle: {
-    color: '#A0A0A0',
+    color: "#A0A0A0",
     fontSize: 13,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
   },
   pinErrorText: {
-    color: '#FF6B6B',
+    color: "#FF6B6B",
     fontSize: 12,
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   pinInput: {
-    backgroundColor: '#141414',
+    backgroundColor: "#141414",
     borderRadius: 8,
     width: 160,
     height: 50,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 24,
     letterSpacing: 12,
-    textAlign: 'center',
+    textAlign: "center",
     borderWidth: 1,
-    borderColor: '#404040',
+    borderColor: "#404040",
     marginBottom: 10,
   },
   pinHint: {
-    color: '#666666',
+    color: "#666666",
     fontSize: 11,
     marginBottom: 20,
   },
   modalActions: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
   },
   cancelModalBtn: {
     flex: 1,
-    backgroundColor: '#333333',
+    backgroundColor: "#333333",
     paddingVertical: 12,
     borderRadius: 6,
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: 8,
   },
   cancelModalText: {
-    color: '#E5E5E5',
-    fontWeight: 'bold',
+    color: "#E5E5E5",
+    fontWeight: "bold",
   },
   confirmModalBtn: {
     flex: 1,
-    backgroundColor: '#E50914',
+    backgroundColor: "#E50914",
     paddingVertical: 12,
     borderRadius: 6,
-    alignItems: 'center',
+    alignItems: "center",
     marginLeft: 8,
   },
   confirmModalText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "bold",
   },
 });

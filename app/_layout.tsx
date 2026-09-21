@@ -1,7 +1,7 @@
-import React from 'react';
-import  { Stack } from 'expo-router';
-import { AuthProvider } from '../src/context/AuthContext';
-import { StatusBar } from 'expo-status-bar';
+import React from "react";
+import { Stack } from "expo-router";
+import { AuthProvider } from "../src/context/AuthContext";
+import { StatusBar } from "expo-status-bar";
 
 export default function RootLayout() {
   return (
@@ -10,13 +10,13 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#141414' },
-          animation: 'fade',
+          contentStyle: { backgroundColor: "#141414" },
+          animation: "fade",
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Đăng nhập' }} />
-        <Stack.Screen name="profiles" options={{ title: 'Chọn hồ sơ' }} />
-        <Stack.Screen name="home" options={{ title: 'Trang chủ' }} />
+        <Stack.Screen name="index" options={{ title: "Đăng nhập" }} />
+        <Stack.Screen name="profiles" options={{ title: "Chọn hồ sơ" }} />
+        <Stack.Screen name="(tabs)" options={{ title: "Trang chủ" }} />
       </Stack>
     </AuthProvider>
   );
