@@ -13,23 +13,33 @@ import { useAuth } from "../src/context/AuthContext";
 import { UserProfile } from "../src/types/auth";
 import { ProfileCard } from "../src/components/ProfileCard";
 import { ParentPinModal } from "../src/components/ParentPinModal";
+import { EditProfileModal } from "../src/components/EditProfileModal";
 import { BrandHeader } from "../src/components/BrandHeader";
 
 export default function ProfilesRoute() {
   const router = useRouter();
-  const { userEmail, profiles, selectProfile, signOut, addProfile } = useAuth();
+  const {
+    userEmail,
+    profiles,
+    loadingProfiles,
+    selectProfile,
+    signOut,
+    addProfile,
+    editProfile,
+    deleteProfile,
+  } = useAuth();
 
   const [selectedParentProfile, setSelectedParentProfile] =
     useState<UserProfile | null>(null);
+  const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleProfileClick = (profile: UserProfile) => {
     if (isEditMode) {
-      Alert.alert(
-        "Chỉnh sửa Hồ sơ",
-        `Chỉnh sửa thông tin của: ${profile.name}`,
-      );
+      setEditingProfile(profile);
+      setEditModalVisible(true);
       return;
     }
 
@@ -53,9 +63,35 @@ export default function ProfilesRoute() {
     router.replace("/");
   };
 
-  const handleAddProfile = () => {
-    addProfile("", "");
-    Alert.alert("Thành công", "Đã thêm hồ sơ học viên mới!");
+  const handleSaveEdit = async (profileId: string, name: string, avatarIcon?: string) => {
+    await editProfile(profileId, name, avatarIcon);
+    Alert.alert("Thành công", "Đã cập nhật thông tin hồ sơ!");
+  };
+
+  const handleDeleteProfile = async (profileId: string) => {
+    await deleteProfile(profileId);
+    Alert.alert("Thành công", "Đã xóa hồ sơ!");
+  };
+
+  const childCount = profiles.filter((p) => p.role === "child").length;
+  const isMaxProfilesReached = childCount >= 5;
+
+  const handleAddProfile = async () => {
+    if (isMaxProfilesReached) {
+      Alert.alert(
+        "Đã đạt giới hạn",
+        "Mỗi tài khoản chỉ được phép tạo tối đa 5 hồ sơ học viên."
+      );
+      return;
+    }
+
+    try {
+      const defaultName = `Bé ${childCount + 1}`;
+      await addProfile(defaultName, "Lớp 1");
+      Alert.alert("Thành công", `Đã thêm hồ sơ "${defaultName}"!`);
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.message || "Không thể thêm hồ sơ");
+    }
   };
 
   return (
@@ -76,7 +112,7 @@ export default function ProfilesRoute() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.headerTitle}>Ai đang học?</Text>
         <Text style={styles.accountSubText}>
-          Tài khoản: {userEmail || "phuhuynh@mathkids.edu.vn"}
+          Tài khoản: {userEmail || "phuhuynh@mathkids.edu.vn"} ({childCount}/5 hồ sơ)
         </Text>
 
         <View style={styles.gridContainer}>
@@ -89,16 +125,18 @@ export default function ProfilesRoute() {
             />
           ))}
 
-          <TouchableOpacity
-            style={styles.addCard}
-            onPress={handleAddProfile}
-            activeOpacity={0.7}
-          >
-            <View style={styles.addAvatarBox}>
-              <Text style={styles.plusIcon}>+</Text>
-            </View>
-            <Text style={styles.addProfileName}>Thêm hồ sơ</Text>
-          </TouchableOpacity>
+          {!isMaxProfilesReached && (
+            <TouchableOpacity
+              style={styles.addCard}
+              onPress={handleAddProfile}
+              activeOpacity={0.7}
+            >
+              <View style={styles.addAvatarBox}>
+                <Text style={styles.plusIcon}>+</Text>
+              </View>
+              <Text style={styles.addProfileName}>Thêm hồ sơ</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
@@ -111,6 +149,17 @@ export default function ProfilesRoute() {
         profile={selectedParentProfile}
         onClose={() => setPinModalVisible(false)}
         onSuccess={handlePinSuccess}
+      />
+
+      <EditProfileModal
+        visible={editModalVisible}
+        profile={editingProfile}
+        onClose={() => {
+          setEditModalVisible(false);
+          setEditingProfile(null);
+        }}
+        onSave={handleSaveEdit}
+        onDelete={handleDeleteProfile}
       />
     </SafeAreaView>
   );

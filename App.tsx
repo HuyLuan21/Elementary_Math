@@ -51,8 +51,19 @@ export default function App() {
   const [profiles, setProfiles] = useState<UserProfile[]>(INITIAL_PROFILES);
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
 
-  const handleLoginSuccess = (email: string) => {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  const handleLoginSuccess = (email: string, user?: any, token?: string) => {
     setUserEmail(email);
+    if (token) {
+      setAuthToken(token);
+    }
+    if (user?.full_name || user?.first_name) {
+      const parentName = user.full_name || `${user.first_name} ${user.last_name || ''}`.trim();
+      setProfiles((prev) =>
+        prev.map((p) => (p.role === 'parent' ? { ...p, name: parentName } : p))
+      );
+    }
     setScreen('profiles');
   };
 
@@ -68,6 +79,7 @@ export default function App() {
   const handleSignOut = () => {
     setActiveProfile(null);
     setUserEmail('');
+    setAuthToken(null);
     setScreen('login');
   };
 

@@ -9,27 +9,36 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/context/AuthContext";
 import { BrandHeader } from "../src/components/BrandHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { authApi } from "../src/services/authApi";
 
 export default function LoginRoute() {
   const router = useRouter();
   const { login } = useAuth();
 
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  // Call real Login API
+  const handleLogin = async () => {
     setErrorMessage("");
+    setSuccessMessage("");
+
     if (!email.trim()) {
-      setErrorMessage("Vui lòng nhập Email hoặc Số điện thoại!");
+      setErrorMessage("Vui lòng nhập Email!");
       return;
     }
     if (!password.trim()) {
@@ -38,23 +47,81 @@ export default function LoginRoute() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await authApi.login({ email, password });
       setIsLoading(false);
-      login(email);
+
+      if (res.data) {
+        await login(res.data.email || email, res.data, res.access_token);
+      } else {
+        await login(email, undefined, res.access_token);
+      }
       router.replace("/profiles");
-    }, 600);
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản!");
+    }
   };
 
-  const handleQuickDemo = () => {
-    setEmail("phuhuynh@mathkids.edu.vn");
-    setPassword("123456");
+  // Call real Register API
+  const handleRegister = async () => {
     setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!fullName.trim()) {
+      setErrorMessage("Vui lòng nhập họ và tên!");
+      return;
+    }
+    if (!email.trim()) {
+      setErrorMessage("Vui lòng nhập Email!");
+      return;
+    }
+    if (!password.trim() || password.length < 6) {
+      setErrorMessage("Mật khẩu phải chứa ít nhất 6 ký tự!");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await authApi.register({
+        full_name: fullName,
+        email,
+        password,
+      });
       setIsLoading(false);
-      login("phuhuynh@mathkids.edu.vn");
+      setSuccessMessage("Đăng ký thành công! Hãy đăng nhập với tài khoản vừa tạo.");
+      setIsRegisterMode(false);
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err.message || "Đăng ký thất bại. Vui lòng thử lại!");
+    }
+  };
+
+  // Quick Demo account login
+  const handleQuickDemo = async () => {
+    const demoEmail = "parent@example.com";
+    const demoPass = "password123";
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsLoading(true);
+
+    try {
+      const res = await authApi.login({ email: demoEmail, password: demoPass });
+      setIsLoading(false);
+      await login(demoEmail, res.data, res.access_token);
       router.replace("/profiles");
-    }, 500);
+    } catch {
+      // Fallback demo if account not seeded yet
+      setIsLoading(false);
+      await login(demoEmail);
+      router.replace("/profiles");
+    }
   };
 
   return (
@@ -72,21 +139,46 @@ export default function LoginRoute() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.title}>Đăng Nhập</Text>
+            <Text style={styles.title}>
+              {isRegisterMode ? "Đăng Ký Tài Khoản" : "Đăng Nhập"}
+            </Text>
             <Text style={styles.subtitle}>
               Hệ thống Học Toán Tiểu Học Thông Minh
             </Text>
 
+            {/* Error Message */}
             {errorMessage ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             ) : null}
 
+            {/* Success Message */}
+            {successMessage ? (
+              <View style={styles.successBox}>
+                <Text style={styles.successText}>{successMessage}</Text>
+              </View>
+            ) : null}
+
+            {/* Full Name input for register */}
+            {isRegisterMode ? (
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Họ và tên (Ví dụ: Nguyễn Văn A)"
+                  placeholderTextColor="#8C8C8C"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                />
+              </View>
+            ) : null}
+
+            {/* Email input */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Email hoặc Số điện thoại"
+                placeholder="Email tài khoản"
                 placeholderTextColor="#8C8C8C"
                 value={email}
                 onChangeText={setEmail}
@@ -95,6 +187,7 @@ export default function LoginRoute() {
               />
             </View>
 
+            {/* Password input */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={[styles.input, { paddingRight: 80 }]}
@@ -114,55 +207,98 @@ export default function LoginRoute() {
               </TouchableOpacity>
             </View>
 
+            {/* Confirm password input for register */}
+            {isRegisterMode ? (
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Xác nhận mật khẩu"
+                  placeholderTextColor="#8C8C8C"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPassword}
+                />
+              </View>
+            ) : null}
+
+            {/* Submit button */}
             <TouchableOpacity
               style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
-              onPress={handleLogin}
+              onPress={isRegisterMode ? handleRegister : handleLogin}
               disabled={isLoading}
               activeOpacity={0.8}
             >
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.loginBtnText}>Đăng Nhập</Text>
+                <Text style={styles.loginBtnText}>
+                  {isRegisterMode ? "Tạo Tài Khoản" : "Đăng Nhập"}
+                </Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.demoBtn}
-              onPress={handleQuickDemo}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.demoBtnText}>
-                ⚡ Đăng nhập nhanh (Tài khoản Demo)
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.optionsRow}>
+            {/* Quick Demo button */}
+            {!isRegisterMode ? (
               <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => setRememberMe(!rememberMe)}
+                style={styles.demoBtn}
+                onPress={handleQuickDemo}
+                disabled={isLoading}
+                activeOpacity={0.8}
               >
-                <View
-                  style={[
-                    styles.checkbox,
-                    rememberMe && styles.checkboxChecked,
-                  ]}
+                <Text style={styles.demoBtnText}>
+                  ⚡ Đăng nhập nhanh (Tài khoản Demo)
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {/* Remember Me & Help */}
+            {!isRegisterMode ? (
+              <View style={styles.optionsRow}>
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => setRememberMe(!rememberMe)}
                 >
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.rememberText}>Ghi nhớ đăng nhập</Text>
-              </TouchableOpacity>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      rememberMe && styles.checkboxChecked,
+                    ]}
+                  >
+                    {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.rememberText}>Ghi nhớ đăng nhập</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity>
-                <Text style={styles.helpText}>Cần trợ giúp?</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    Alert.alert(
+                      "Trợ giúp",
+                      "Vui lòng liên hệ quản trị viên nếu bạn quên mật khẩu hoặc cần hỗ trợ."
+                    )
+                  }
+                >
+                  <Text style={styles.helpText}>Cần trợ giúp?</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
+            {/* Toggle Sign in / Sign up */}
             <View style={styles.signupContainer}>
-              <Text style={styles.newToApp}>Mới tham gia MathKids? </Text>
-              <TouchableOpacity>
-                <Text style={styles.signupNow}>Đăng ký ngay.</Text>
+              <Text style={styles.newToApp}>
+                {isRegisterMode
+                  ? "Đã có tài khoản MathKids? "
+                  : "Mới tham gia MathKids? "}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsRegisterMode(!isRegisterMode);
+                  setErrorMessage("");
+                  setSuccessMessage("");
+                }}
+              >
+                <Text style={styles.signupNow}>
+                  {isRegisterMode ? "Đăng nhập ngay." : "Đăng ký ngay."}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -223,6 +359,19 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#FF6B6B",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  successBox: {
+    backgroundColor: "#10B98122",
+    borderLeftWidth: 4,
+    borderLeftColor: "#10B981",
+    padding: 12,
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  successText: {
+    color: "#34D399",
     fontSize: 13,
     fontWeight: "500",
   },

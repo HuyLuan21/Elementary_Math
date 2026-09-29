@@ -11,14 +11,18 @@ import { UserProfile } from '../types/auth';
 
 interface ParentPinModalProps {
   visible: boolean;
-  profile: UserProfile | null;
+  profile?: UserProfile | null;
+  title?: string;
+  subtitle?: string;
   onClose: () => void;
-  onSuccess: (profile: UserProfile) => void;
+  onSuccess: (profile?: UserProfile | null) => void;
 }
 
 export const ParentPinModal: React.FC<ParentPinModalProps> = ({
   visible,
   profile,
+  title = 'Xác thực Phụ huynh',
+  subtitle = 'Nhập mã PIN 4 chữ số của bố mẹ để tiếp tục.',
   onClose,
   onSuccess,
 }) => {
@@ -26,15 +30,14 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
   const [pinError, setPinError] = useState('');
 
   const handleVerify = () => {
-    if (!profile) return;
-    const requiredPin = profile.pinCode || '1234';
+    const requiredPin = profile?.pinCode || '1234';
 
     if (pinInput === requiredPin) {
       setPinInput('');
       setPinError('');
       onSuccess(profile);
     } else {
-      setPinError('Mã PIN không đúng! Thử lại (Gợi ý: 1234)');
+      setPinError('Mã PIN không đúng! Thử lại (Mặc định: 1234)');
     }
   };
 
@@ -48,10 +51,8 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalLockEmoji}>🛡️</Text>
-          <Text style={styles.modalTitle}>Xác thực Phụ huynh</Text>
-          <Text style={styles.modalSubtitle}>
-            Nhập mã PIN 4 chữ số để vào khu vực quản lý dành cho cha mẹ.
-          </Text>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <Text style={styles.modalSubtitle}>{subtitle}</Text>
 
           {pinError ? <Text style={styles.pinErrorText}>{pinError}</Text> : null}
 
