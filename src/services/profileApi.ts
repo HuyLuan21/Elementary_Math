@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from './authApi';
+import { apiClient } from "./axios";
 
 export interface ApiProfileData {
   id: string;
@@ -19,79 +19,56 @@ export interface CreateProfileParams {
 
 export const profileApi = {
   // Lấy danh sách hồ sơ của user hiện tại
-  getProfiles: async (token: string): Promise<ApiProfileData[]> => {
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/profiles`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+  getProfiles: async (token?: string): Promise<ApiProfileData[]> => {
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const response = await apiClient.get<{ data: ApiProfileData[] }>(
+      "/profiles",
+      {
+        headers,
       },
-    });
-
-    const json = await response.json();
-    if (!response.ok) {
-      throw new Error(json.message || 'Không thể tải danh sách hồ sơ');
-    }
-    return json.data || [];
+    );
+    return response.data?.data || [];
   },
 
   // Tạo hồ sơ mới cho bé
-  createProfile: async (token: string, data: CreateProfileParams): Promise<ApiProfileData> => {
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/profiles`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+  createProfile: async (
+    token: string | undefined,
+    data: CreateProfileParams,
+  ): Promise<ApiProfileData> => {
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const response = await apiClient.post<{ data: ApiProfileData }>(
+      "/profiles",
+      data,
+      {
+        headers,
       },
-      body: JSON.stringify(data),
-    });
-
-    const json = await response.json();
-    if (!response.ok) {
-      throw new Error(json.message || 'Không thể tạo hồ sơ mới');
-    }
-    return json.data;
+    );
+    return response.data.data;
   },
 
   // Cập nhật hồ sơ bé
   updateProfile: async (
-    token: string,
+    token: string | undefined,
     profileId: string,
-    data: Partial<CreateProfileParams>
+    data: Partial<CreateProfileParams>,
   ): Promise<ApiProfileData> => {
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/profiles/${profileId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    const json = await response.json();
-    if (!response.ok) {
-      throw new Error(json.message || 'Không thể cập nhật hồ sơ');
-    }
-    return json.data;
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const response = await apiClient.put<{ data: ApiProfileData }>(
+      `/profiles/${profileId}`,
+      data,
+      { headers },
+    );
+    return response.data.data;
   },
 
   // Xóa hồ sơ bé
-  deleteProfile: async (token: string, profileId: string): Promise<void> => {
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/profiles/${profileId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+  deleteProfile: async (
+    token: string | undefined,
+    profileId: string,
+  ): Promise<void> => {
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    await apiClient.delete(`/profiles/${profileId}`, {
+      headers,
     });
-
-    const json = await response.json();
-    if (!response.ok) {
-      throw new Error(json.message || 'Không thể xóa hồ sơ');
-    }
   },
 };

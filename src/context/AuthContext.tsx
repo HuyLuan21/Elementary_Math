@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { UserProfile, AuthContextType } from '../types/auth';
-import { UserData } from '../services/authApi';
+import { UserData, setAuthToken as setApiAuthToken } from '../services/authApi';
 import { profileApi, ApiProfileData } from '../services/profileApi';
 
 const AVATAR_COLORS = ['#E11D48', '#0EA5E9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
@@ -65,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (token) {
       setAuthToken(token);
+      setApiAuthToken(token);
       await fetchProfiles(token, user);
     }
   };
@@ -83,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserEmail(null);
     setCurrentUser(null);
     setAuthToken(null);
+    setApiAuthToken(null);
     setActiveProfile(null);
     setProfiles([]);
   };
