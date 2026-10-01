@@ -15,7 +15,6 @@ const INITIAL_PROFILES: UserProfile[] = [
     role: 'parent',
     avatarColor: '#4F46E5', // Indigo blue
     avatarIcon: '👨‍👩‍👧‍👦',
-    pinCode: '1234',
   },
   {
     id: 'kid-1',

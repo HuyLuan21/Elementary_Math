@@ -1,4 +1,5 @@
 import { apiClient } from "./axios";
+import { ProfileInput } from "../types/auth";
 
 export interface ApiProfileData {
   id: string;
@@ -11,11 +12,7 @@ export interface ApiProfileData {
   updated_at?: string;
 }
 
-export interface CreateProfileParams {
-  display_name: string;
-  avatar_url?: string;
-  birth_date?: string;
-}
+export type CreateProfileParams = ProfileInput;
 
 export const profileApi = {
   // Lấy danh sách hồ sơ của user hiện tại

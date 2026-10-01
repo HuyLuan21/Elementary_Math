@@ -11,12 +11,10 @@ import { useRouter } from "expo-router";
 import * as Speech from "expo-speech";
 import { useAuth } from "../../src/context/AuthContext";
 import { BrandHeader } from "../../src/components/BrandHeader";
-import { ParentPinModal } from "../../src/components/ParentPinModal";
 
 export default function HomeRoute() {
   const router = useRouter();
   const { activeProfile, signOut } = useAuth();
-  const [pinModalVisible, setPinModalVisible] = React.useState(false);
 
   const profile = activeProfile || {
     id: "kid-1",
@@ -42,11 +40,7 @@ export default function HomeRoute() {
   };
 
   const handleSwitchProfile = () => {
-    if (profile.role === "child") {
-      setPinModalVisible(true);
-    } else {
-      router.replace("/profiles");
-    }
+    router.replace("/profiles");
   };
 
   const handleSignOut = () => {
@@ -220,7 +214,7 @@ export default function HomeRoute() {
                     Cài đặt mã PIN Phụ huynh
                   </Text>
                   <Text style={styles.parentActionSub}>
-                    Mã PIN hiện tại: 1234
+                    Quản lý bảo mật tài khoản
                   </Text>
                 </View>
                 <Text style={styles.arrowText}>›</Text>
@@ -259,17 +253,6 @@ export default function HomeRoute() {
         </View>
       </ScrollView>
 
-      <ParentPinModal
-        visible={pinModalVisible}
-        profile={profile}
-        title="Xác thực đổi hồ sơ"
-        subtitle="Nhập mã PIN của bố mẹ để đổi sang hồ sơ khác hoặc thoát ra."
-        onClose={() => setPinModalVisible(false)}
-        onSuccess={() => {
-          setPinModalVisible(false);
-          router.replace("/profiles");
-        }}
-      />
     </SafeAreaView>
   );
 }

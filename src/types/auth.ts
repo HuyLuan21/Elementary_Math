@@ -2,6 +2,12 @@ import { UserData } from '../services/authApi';
 
 export type ProfileRole = 'parent' | 'child';
 
+export interface ProfileInput {
+  display_name: string;
+  avatar_url: string;
+  birth_date?: string | null;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -12,7 +18,6 @@ export interface UserProfile {
   totalStars?: number;
   birthDate?: string | null;
   grade?: string;
-  pinCode?: string;
   age?: number;
 }
 
@@ -23,12 +28,12 @@ export interface AuthContextType {
   activeProfile: UserProfile | null;
   profiles: UserProfile[];
   loadingProfiles: boolean;
+  profilesError: string | null;
   login: (email: string, user?: UserData, token?: string) => Promise<void>;
   selectProfile: (profile: UserProfile) => void;
   signOut: () => void;
-  addProfile: (name: string, grade?: string, avatarUrl?: string) => Promise<void>;
-  editProfile: (profileId: string, name: string, avatarUrl?: string) => Promise<void>;
+  addProfile: (profile: ProfileInput) => Promise<void>;
+  editProfile: (profileId: string, profile: Partial<ProfileInput>) => Promise<void>;
   deleteProfile: (profileId: string) => Promise<void>;
-  verifyParentPin: (pin: string) => boolean;
   refreshProfiles: () => Promise<void>;
 }
