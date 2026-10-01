@@ -59,7 +59,9 @@ export default function LoginRoute() {
       router.replace("/profiles");
     } catch (err: any) {
       setIsLoading(false);
-      setErrorMessage(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản!");
+      setErrorMessage(
+        err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản!",
+      );
     }
   };
 
@@ -93,7 +95,9 @@ export default function LoginRoute() {
         password,
       });
       setIsLoading(false);
-      setSuccessMessage("Đăng ký thành công! Hãy đăng nhập với tài khoản vừa tạo.");
+      setSuccessMessage(
+        "Đăng ký thành công! Hãy đăng nhập với tài khoản vừa tạo.",
+      );
       setIsRegisterMode(false);
     } catch (err: any) {
       setIsLoading(false);
@@ -273,7 +277,7 @@ export default function LoginRoute() {
                   onPress={() =>
                     Alert.alert(
                       "Trợ giúp",
-                      "Vui lòng liên hệ quản trị viên nếu bạn quên mật khẩu hoặc cần hỗ trợ."
+                      "Vui lòng liên hệ quản trị viên nếu bạn quên mật khẩu hoặc cần hỗ trợ.",
                     )
                   }
                 >

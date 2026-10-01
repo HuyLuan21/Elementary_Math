@@ -88,7 +88,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         password,
       });
       setIsLoading(false);
-      setSuccessMessage("Đăng ký thành công! Hãy đăng nhập với tài khoản của bạn.");
+      setSuccessMessage(
+        "Đăng ký thành công! Hãy đăng nhập với tài khoản của bạn.",
+      );
       setIsRegisterMode(false);
     } catch (err: any) {
       setIsLoading(false);
@@ -270,7 +272,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   onPress={() =>
                     Alert.alert(
                       "Trợ giúp",
-                      "Vui lòng liên hệ quản trị viên hoặc hotline hỗ trợ nếu bạn quên mật khẩu."
+                      "Vui lòng liên hệ quản trị viên hoặc hotline hỗ trợ nếu bạn quên mật khẩu.",
                     )
                   }
                 >
