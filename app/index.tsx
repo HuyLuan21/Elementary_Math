@@ -88,10 +88,8 @@ export default function LoginRoute() {
 
       // Đăng nhập thành công thì chuyển sang quản lý hồ sơ bé
       router.replace("/profiles");
-    } catch (err: any) {
-      setErrorMessage(
-        err?.message || "Email hoặc mật khẩu không chính xác."
-      );
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Email hoặc mật khẩu không chính xác.");
     } finally {
       setIsLoading(false);
     }
@@ -149,10 +147,8 @@ export default function LoginRoute() {
         setIsRegisterMode(false);
         setSuccessMessage("");
       }, 1200);
-    } catch (err: any) {
-      setErrorMessage(
-        err?.message || "Không thể tạo tài khoản. Vui lòng thử lại."
-      );
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Không thể tạo tài khoản. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
     }

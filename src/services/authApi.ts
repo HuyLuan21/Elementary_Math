@@ -26,13 +26,13 @@ export interface LoginResponse {
 
 export interface LoginParams {
   email: string;
-  password?: string;
+  password: string;
 }
 
 export interface RegisterParams {
   full_name: string;
   email: string;
-  password?: string;
+  password: string;
 }
 
 export const authApi = {
@@ -50,7 +50,7 @@ export const authApi = {
     full_name,
     email,
     password,
-  }: RegisterParams): Promise<any> => {
+  }: RegisterParams): Promise<unknown> => {
     const response = await apiClient.post("/auth/register", {
       full_name: full_name.trim(),
       email: email.trim(),

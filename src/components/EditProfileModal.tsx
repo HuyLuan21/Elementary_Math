@@ -52,8 +52,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     try {
       await onSave(profile.id, name.trim(), selectedEmoji);
       onClose();
-    } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể lưu thay đổi');
+    } catch (error: unknown) {
+      Alert.alert(
+        'Lỗi',
+        error instanceof Error ? error.message : 'Không thể lưu thay đổi'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -73,8 +76,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             try {
               await onDelete(profile.id);
               onClose();
-            } catch (error: any) {
-              Alert.alert('Lỗi', error.message || 'Không thể xóa hồ sơ');
+            } catch (error: unknown) {
+              Alert.alert(
+                'Lỗi',
+                error instanceof Error ? error.message : 'Không thể xóa hồ sơ'
+              );
             } finally {
               setIsSaving(false);
             }

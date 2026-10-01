@@ -53,9 +53,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       } else {
         onLoginSuccess(email, undefined, res.access_token);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
-      setErrorMessage(err.message || "Đăng nhập thất bại. Vui lòng thử lại!");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Đăng nhập thất bại. Vui lòng thử lại!"
+      );
     }
   };
 
@@ -90,9 +92,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       setIsLoading(false);
       setSuccessMessage("Đăng ký thành công! Hãy đăng nhập với tài khoản của bạn.");
       setIsRegisterMode(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
-      setErrorMessage(err.message || "Đăng ký thất bại. Vui lòng thử lại!");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Đăng ký thất bại. Vui lòng thử lại!"
+      );
     }
   };
 
@@ -109,10 +113,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const res = await authApi.login({ email: demoEmail, password: demoPass });
       setIsLoading(false);
       onLoginSuccess(demoEmail, res.data, res.access_token);
-    } catch {
-      // Fallback in demo mode if server demo account is not seeded yet
+    } catch (error: unknown) {
       setIsLoading(false);
-      onLoginSuccess(demoEmail);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Đăng nhập demo thất bại. Vui lòng thử lại!"
+      );
     }
   };
 

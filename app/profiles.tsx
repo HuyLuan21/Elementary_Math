@@ -94,8 +94,11 @@ export default function ProfilesRoute() {
       const defaultName = `Bé ${childCount + 1}`;
       await addProfile(defaultName, "Lớp 1");
       Alert.alert("Thành công", `Đã thêm hồ sơ "${defaultName}"!`);
-    } catch (error: any) {
-      Alert.alert("Lỗi", error.message || "Không thể thêm hồ sơ");
+    } catch (error: unknown) {
+      Alert.alert(
+        "Lỗi",
+        error instanceof Error ? error.message : "Không thể thêm hồ sơ"
+      );
     }
   };
 
