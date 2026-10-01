@@ -52,10 +52,15 @@ export default function ProfilesRoute() {
     }
   };
 
-  const handlePinSuccess = (parentProfile: UserProfile) => {
-    setPinModalVisible(false);
-    selectProfile(parentProfile);
-    router.replace("/(tabs)");
+  const handlePinSuccess = (parentProfile: UserProfile | null) => {
+  setPinModalVisible(false);
+
+  if (!parentProfile) {
+    return;
+  }
+
+  selectProfile(parentProfile);
+  router.replace("/(tabs)");
   };
 
   const handleSignOut = () => {
@@ -148,7 +153,10 @@ export default function ProfilesRoute() {
         visible={pinModalVisible}
         profile={selectedParentProfile}
         onClose={() => setPinModalVisible(false)}
-        onSuccess={handlePinSuccess}
+        onSuccess={(profile) => {
+          if (!profile) return;
+          handlePinSuccess(profile);
+        }}
       />
 
       <EditProfileModal

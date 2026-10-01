@@ -1,312 +1,500 @@
 import React, { useState } from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
+  ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "../src/context/AuthContext";
-import { BrandHeader } from "../src/components/BrandHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  User,
+} from "lucide-react-native";
+
+import { useAuth } from "../src/context/AuthContext";
 import { authApi } from "../src/services/authApi";
+import { COLORS } from "../src/theme";
 
 export default function LoginRoute() {
   const router = useRouter();
   const { login } = useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Call real Login API
-  const handleLogin = async () => {
+  // Xử lý thông báo lỗi và thành công
+  const clearMessages = () => {
     setErrorMessage("");
     setSuccessMessage("");
-
-    if (!email.trim()) {
-      setErrorMessage("Vui lòng nhập Email!");
-      return;
-    }
-    if (!password.trim()) {
-      setErrorMessage("Vui lòng nhập Mật khẩu!");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await authApi.login({ email, password });
-      setIsLoading(false);
-
-      if (res.data) {
-        await login(res.data.email || email, res.data, res.access_token);
-      } else {
-        await login(email, undefined, res.access_token);
-      }
-      router.replace("/profiles");
-    } catch (err: any) {
-      setIsLoading(false);
-      setErrorMessage(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản!");
-    }
   };
 
-  // Call real Register API
-  const handleRegister = async () => {
-    setErrorMessage("");
-    setSuccessMessage("");
+  // Xử lý đăng nhập tài khoản phụ huynh
+  const handleLogin = async () => {
+    clearMessages();
 
-    if (!fullName.trim()) {
-      setErrorMessage("Vui lòng nhập họ và tên!");
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      setErrorMessage("Vui lòng nhập email.");
       return;
     }
-    if (!email.trim()) {
-      setErrorMessage("Vui lòng nhập Email!");
-      return;
-    }
-    if (!password.trim() || password.length < 6) {
-      setErrorMessage("Mật khẩu phải chứa ít nhất 6 ký tự!");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage("Mật khẩu xác nhận không khớp!");
+
+    if (!password) {
+      setErrorMessage("Vui lòng nhập mật khẩu.");
       return;
     }
 
     setIsLoading(true);
+
     try {
-      await authApi.register({
-        full_name: fullName,
-        email,
+      const res = await authApi.login({
+        email: trimmedEmail,
         password,
       });
-      setIsLoading(false);
-      setSuccessMessage("Đăng ký thành công! Hãy đăng nhập với tài khoản vừa tạo.");
-      setIsRegisterMode(false);
+
+      if (res.data) {
+        await login(
+          res.data.email || trimmedEmail,
+          res.data,
+          res.access_token
+        );
+      } else {
+        await login(trimmedEmail, undefined, res.access_token);
+      }
+
+      // Đăng nhập thành công thì chuyển sang quản lý hồ sơ bé
+      router.replace("/profiles");
     } catch (err: any) {
+      setErrorMessage(
+        err?.message || "Email hoặc mật khẩu không chính xác."
+      );
+    } finally {
       setIsLoading(false);
-      setErrorMessage(err.message || "Đăng ký thất bại. Vui lòng thử lại!");
     }
   };
 
-  // Quick Demo account login
-  const handleQuickDemo = async () => {
-    const demoEmail = "parent@example.com";
-    const demoPass = "password123";
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMessage("");
-    setSuccessMessage("");
+  // Xử lý đăng ký tài khoản phụ huynh
+  const handleRegister = async () => {
+    clearMessages();
+
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
+      setErrorMessage("Vui lòng nhập họ và tên.");
+      return;
+    }
+
+    if (!trimmedEmail) {
+      setErrorMessage("Vui lòng nhập email.");
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage("Vui lòng nhập mật khẩu.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Mật khẩu cần có ít nhất 6 ký tự.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const res = await authApi.login({ email: demoEmail, password: demoPass });
+      await authApi.register({
+        full_name: trimmedName,
+        email: trimmedEmail,
+        password,
+      });
+
+      setSuccessMessage(
+        "Tài khoản đã được tạo. Vui lòng đăng nhập để tiếp tục."
+      );
+
+      setPassword("");
+      setConfirmPassword("");
+
+      setTimeout(() => {
+        setIsRegisterMode(false);
+        setSuccessMessage("");
+      }, 1200);
+    } catch (err: any) {
+      setErrorMessage(
+        err?.message || "Không thể tạo tài khoản. Vui lòng thử lại."
+      );
+    } finally {
       setIsLoading(false);
-      await login(demoEmail, res.data, res.access_token);
-      router.replace("/profiles");
-    } catch {
-      // Fallback demo if account not seeded yet
-      setIsLoading(false);
-      await login(demoEmail);
-      router.replace("/profiles");
     }
+  };
+
+  // Chuyển đổi giữa màn hình đăng nhập và đăng ký
+  const switchMode = (registerMode: boolean) => {
+    setIsRegisterMode(registerMode);
+    setFullName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    clearMessages();
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.headerWrapper}>
-            <BrandHeader />
+          {/* Header */}
+          <View style={styles.brandSection}>
+            <Image
+              source={require("../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+
+            <Text style={styles.brandTitle}>
+              Chào mừng đến với E-math
+            </Text>
+
+            <Text style={styles.brandSubtitle}>
+              Đồng hành cùng bé trong hành trình học toán
+            </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.title}>
-              {isRegisterMode ? "Đăng Ký Tài Khoản" : "Đăng Nhập"}
-            </Text>
-            <Text style={styles.subtitle}>
-              Hệ thống Học Toán Tiểu Học Thông Minh
+            {/* Tab đăng nhập / đăng ký */}
+            <View style={styles.tabs}>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  !isRegisterMode && styles.activeTab,
+                ]}
+                onPress={() => switchMode(false)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    !isRegisterMode && styles.activeTabText,
+                  ]}
+                >
+                  Đăng nhập
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  isRegisterMode && styles.activeTab,
+                ]}
+                onPress={() => switchMode(true)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    isRegisterMode && styles.activeTabText,
+                  ]}
+                >
+                  Đăng ký
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tiêu đề và mô tả form */}
+            <Text style={styles.formTitle}>
+              {isRegisterMode
+                ? "Tạo tài khoản phụ huynh"
+                : "Đăng nhập tài khoản phụ huynh"}
             </Text>
 
-            {/* Error Message */}
+            <Text style={styles.formSubtitle}>
+              {isRegisterMode
+                ? "Tạo tài khoản để quản lý hồ sơ và quá trình học tập của bé."
+                : "Đăng nhập để quản lý hồ sơ và theo dõi quá trình học tập của bé."}
+            </Text>
+
+            {/* Thông báo lỗi */}
             {errorMessage ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             ) : null}
 
-            {/* Success Message */}
+            {/* Thông báo đăng ký thành công */}
             {successMessage ? (
               <View style={styles.successBox}>
-                <Text style={styles.successText}>{successMessage}</Text>
+                <View style={styles.successIcon}>
+                  <Check
+                    size={15}
+                    color="#FFFFFF"
+                    strokeWidth={3}
+                  />
+                </View>
+
+                <Text style={styles.successText}>
+                  {successMessage}
+                </Text>
               </View>
             ) : null}
 
-            {/* Full Name input for register */}
-            {isRegisterMode ? (
-              <View style={styles.inputContainer}>
+            {/* Họ và tên - chỉ hiển thị khi đăng ký */}
+            {isRegisterMode && (
+              <View style={styles.field}>
+                <Text style={styles.label}>Họ và tên</Text>
+
+                <View style={styles.inputWrapper}>
+                  <User
+                    size={19}
+                    color={COLORS.textSecondary}
+                    strokeWidth={1.8}
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Nhập họ và tên"
+                    placeholderTextColor="#9AA9B5"
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Email */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
+
+              <View style={styles.inputWrapper}>
+                <Mail
+                  size={19}
+                  color={COLORS.textSecondary}
+                  strokeWidth={1.8}
+                />
+
                 <TextInput
                   style={styles.input}
-                  placeholder="Họ và tên (Ví dụ: Nguyễn Văn A)"
-                  placeholderTextColor="#8C8C8C"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Nhập email của bạn"
+                  placeholderTextColor="#9AA9B5"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </View>
-            ) : null}
-
-            {/* Email input */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email tài khoản"
-                placeholderTextColor="#8C8C8C"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
             </View>
 
-            {/* Password input */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.input, { paddingRight: 80 }]}
-                placeholder="Mật khẩu"
-                placeholderTextColor="#8C8C8C"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
+            {/* Mật khẩu */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Mật khẩu</Text>
+
+              <View style={styles.inputWrapper}>
+                <LockKeyhole
+                  size={19}
+                  color={COLORS.textSecondary}
+                  strokeWidth={1.8}
+                />
+
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Nhập mật khẩu"
+                  placeholderTextColor="#9AA9B5"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  {showPassword ? (
+                    <EyeOff
+                      size={19}
+                      color={COLORS.textSecondary}
+                    />
+                  ) : (
+                    <Eye
+                      size={19}
+                      color={COLORS.textSecondary}
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Xác nhận mật khẩu - chỉ hiển thị khi đăng ký */}
+            {isRegisterMode && (
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  Xác nhận mật khẩu
+                </Text>
+
+                <View style={styles.inputWrapper}>
+                  <LockKeyhole
+                    size={19}
+                    color={COLORS.textSecondary}
+                    strokeWidth={1.8}
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Nhập lại mật khẩu"
+                    placeholderTextColor="#9AA9B5"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                  />
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setShowConfirmPassword(
+                        !showConfirmPassword
+                      )
+                    }
+                    style={styles.eyeButton}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff
+                        size={19}
+                        color={COLORS.textSecondary}
+                      />
+                    ) : (
+                      <Eye
+                        size={19}
+                        color={COLORS.textSecondary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Ghi nhớ đăng nhập */}
+            {!isRegisterMode && (
               <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
+                style={styles.rememberRow}
+                activeOpacity={0.8}
+                onPress={() => setRememberMe(!rememberMe)}
               >
-                <Text style={styles.eyeText}>
-                  {showPassword ? "ẨN" : "HIỆN"}
+                <View
+                  style={[
+                    styles.checkbox,
+                    rememberMe && styles.checkboxActive,
+                  ]}
+                >
+                  {rememberMe && (
+                    <Check
+                      size={13}
+                      color="#FFFFFF"
+                      strokeWidth={3}
+                    />
+                  )}
+                </View>
+
+                <Text style={styles.rememberText}>
+                  Ghi nhớ đăng nhập
                 </Text>
               </TouchableOpacity>
-            </View>
+            )}
 
-            {/* Confirm password input for register */}
-            {isRegisterMode ? (
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Xác nhận mật khẩu"
-                  placeholderTextColor="#8C8C8C"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showPassword}
-                />
-              </View>
-            ) : null}
-
-            {/* Submit button */}
+            {/* Nút đăng nhập / đăng ký */}
             <TouchableOpacity
-              style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
-              onPress={isRegisterMode ? handleRegister : handleLogin}
+              style={[
+                styles.mainButton,
+                isLoading && styles.mainButtonDisabled,
+              ]}
               disabled={isLoading}
-              activeOpacity={0.8}
+              onPress={
+                isRegisterMode
+                  ? handleRegister
+                  : handleLogin
+              }
+              activeOpacity={0.85}
             >
               {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.loginBtnText}>
-                  {isRegisterMode ? "Tạo Tài Khoản" : "Đăng Nhập"}
-                </Text>
+                <>
+                  <Text style={styles.mainButtonText}>
+                    {isRegisterMode
+                      ? "Tạo tài khoản"
+                      : "Đăng nhập"}
+                  </Text>
+
+                  <ArrowRight
+                    size={19}
+                    color="#FFFFFF"
+                    strokeWidth={2.5}
+                  />
+                </>
               )}
             </TouchableOpacity>
 
-            {/* Quick Demo button */}
-            {!isRegisterMode ? (
-              <TouchableOpacity
-                style={styles.demoBtn}
-                onPress={handleQuickDemo}
-                disabled={isLoading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.demoBtnText}>
-                  ⚡ Đăng nhập nhanh (Tài khoản Demo)
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-
-            {/* Remember Me & Help */}
-            {!isRegisterMode ? (
-              <View style={styles.optionsRow}>
-                <TouchableOpacity
-                  style={styles.checkboxRow}
-                  onPress={() => setRememberMe(!rememberMe)}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      rememberMe && styles.checkboxChecked,
-                    ]}
-                  >
-                    {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <Text style={styles.rememberText}>Ghi nhớ đăng nhập</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() =>
-                    Alert.alert(
-                      "Trợ giúp",
-                      "Vui lòng liên hệ quản trị viên nếu bạn quên mật khẩu hoặc cần hỗ trợ."
-                    )
-                  }
-                >
-                  <Text style={styles.helpText}>Cần trợ giúp?</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {/* Toggle Sign in / Sign up */}
-            <View style={styles.signupContainer}>
-              <Text style={styles.newToApp}>
+            {/* Chuyển đổi giữa đăng nhập và đăng ký */}
+            <View style={styles.switchRow}>
+              <Text style={styles.switchText}>
                 {isRegisterMode
-                  ? "Đã có tài khoản MathKids? "
-                  : "Mới tham gia MathKids? "}
+                  ? "Đã có tài khoản?"
+                  : "Chưa có tài khoản?"}
               </Text>
+
               <TouchableOpacity
-                onPress={() => {
-                  setIsRegisterMode(!isRegisterMode);
-                  setErrorMessage("");
-                  setSuccessMessage("");
-                }}
+                onPress={() => switchMode(!isRegisterMode)}
               >
-                <Text style={styles.signupNow}>
-                  {isRegisterMode ? "Đăng nhập ngay." : "Đăng ký ngay."}
+                <Text style={styles.switchLink}>
+                  {isRegisterMode
+                    ? " Đăng nhập"
+                    : " Đăng ký"}
                 </Text>
               </TouchableOpacity>
             </View>
-
-            <Text style={styles.captchaNote}>
-              Trang này được bảo vệ bởi Google reCAPTCHA để đảm bảo an toàn cho
-              tài khoản học sinh.
-            </Text>
           </View>
+
+          {/* Footer */}
+          <Text style={styles.footerText}>
+            E-math · Nền tảng học toán dành cho bé
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -314,175 +502,282 @@ export default function LoginRoute() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Layout tổng thể
+  safeArea: {
     flex: 1,
-    backgroundColor: "#141414",
+    backgroundColor: "#F7FBFD",
   },
+
   keyboardView: {
     flex: 1,
   },
+
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    paddingBottom: 28,
   },
-  headerWrapper: {
-    marginBottom: 28,
-  },
-  card: {
-    backgroundColor: "rgba(0, 0, 0, 0.85)",
-    borderRadius: 12,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: "#262626",
-    elevation: 5,
-  },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: "#A0A0A0",
-    fontSize: 13,
+
+  // Header
+  brandSection: {
+    width: "100%",
+    maxWidth: 470,
+    alignItems: "center",
     marginBottom: 24,
   },
-  errorBox: {
-    backgroundColor: "#E5091422",
-    borderLeftWidth: 4,
-    borderLeftColor: "#E50914",
-    padding: 12,
-    borderRadius: 4,
-    marginBottom: 16,
+
+  logo: {
+    width: 82,
+    height: 82,
+    marginBottom: 12,
   },
-  errorText: {
-    color: "#FF6B6B",
-    fontSize: 13,
-    fontWeight: "500",
+
+  brandTitle: {
+    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: "800",
+    textAlign: "center",
+    letterSpacing: -0.4,
   },
-  successBox: {
-    backgroundColor: "#10B98122",
-    borderLeftWidth: 4,
-    borderLeftColor: "#10B981",
-    padding: 12,
-    borderRadius: 4,
-    marginBottom: 16,
+
+  brandSubtitle: {
+    marginTop: 6,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
   },
-  successText: {
-    color: "#34D399",
-    fontSize: 13,
-    fontWeight: "500",
+
+  // Card đăng nhập / đăng ký
+  card: {
+    width: "100%",
+    maxWidth: 470,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    borderWidth: 1,
+    borderColor: "#E7EFF4",
+    shadowColor: "#17324D",
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
   },
-  inputContainer: {
-    marginBottom: 16,
+
+  // Tab đăng nhập / đăng ký
+  tabs: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8EFF3",
+    marginBottom: 25,
+  },
+
+  tab: {
+    flex: 1,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
   },
-  input: {
-    backgroundColor: "#333333",
-    borderRadius: 6,
-    height: 52,
-    paddingHorizontal: 16,
-    color: "#FFFFFF",
-    fontSize: 15,
+
+  activeTab: {
+    borderBottomWidth: 2.5,
+    borderBottomColor: COLORS.primary,
   },
-  eyeButton: {
-    position: "absolute",
-    right: 16,
-    top: 16,
-  },
-  eyeText: {
-    color: "#8C8C8C",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  loginBtn: {
-    backgroundColor: "#E50914",
-    height: 50,
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 10,
-  },
-  loginBtnDisabled: {
-    opacity: 0.7,
-  },
-  loginBtnText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  demoBtn: {
-    backgroundColor: "#1E293B",
-    borderWidth: 1,
-    borderColor: "#38BDF8",
-    height: 46,
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 12,
-  },
-  demoBtnText: {
-    color: "#38BDF8",
+
+  tabText: {
     fontSize: 14,
     fontWeight: "600",
+    color: COLORS.textSecondary,
   },
-  optionsRow: {
+
+  activeTabText: {
+    color: COLORS.primary,
+    fontWeight: "bold",
+  },
+
+  // Tiêu đề form
+  formTitle: {
+    color: COLORS.text,
+    fontSize: 21,
+    fontWeight: "800",
+    lineHeight: 28,
+    marginBottom: 7,
+  },
+
+  formSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 22,
+  },
+
+  // Thông báo
+  errorBox: {
+    backgroundColor: "#FFF5F5",
+    borderWidth: 1,
+    borderColor: "#FFD9D9",
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    marginBottom: 16,
+  },
+
+  errorText: {
+    color: "#C63D45",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+
+  successBox: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 20,
+    backgroundColor: "#F1FBF5",
+    borderWidth: 1,
+    borderColor: "#CFEED9",
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    marginBottom: 16,
   },
-  checkboxRow: {
+
+  successIcon: {
+    width: 23,
+    height: 23,
+    borderRadius: 12,
+    backgroundColor: COLORS.success,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 9,
+  },
+
+  successText: {
+    flex: 1,
+    color: "#287B43",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+
+  // Các trường nhập liệu
+  field: {
+    marginBottom: 16,
+  },
+
+  label: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 7,
+  },
+
+  inputWrapper: {
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DCE7ED",
+    borderRadius: 11,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
   },
+
+  input: {
+    flex: 1,
+    height: "100%",
+    color: COLORS.text,
+    fontSize: 14,
+    marginLeft: 10,
+    paddingVertical: 0,
+  },
+
+  eyeButton: {
+    width: 34,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
+
+  // Ghi nhớ đăng nhập
+  rememberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: -2,
+    marginBottom: 2,
+  },
+
   checkbox: {
     width: 18,
     height: 18,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: "#737373",
-    backgroundColor: "#333333",
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "#CBD9E1",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
   },
-  checkboxChecked: {
-    backgroundColor: "#737373",
-    borderColor: "#737373",
+
+  checkboxActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
-  checkmark: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "bold",
-  },
+
   rememberText: {
-    color: "#B3B3B3",
-    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontSize: 12.5,
   },
-  helpText: {
-    color: "#B3B3B3",
-    fontSize: 13,
-  },
-  signupContainer: {
+
+  // Nút chính
+  mainButton: {
+    height: 52,
+    borderRadius: 11,
+    backgroundColor: COLORS.primary,
     flexDirection: "row",
-    marginTop: 28,
-  },
-  newToApp: {
-    color: "#737373",
-    fontSize: 14,
-  },
-  signupNow: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  captchaNote: {
-    color: "#737373",
-    fontSize: 11,
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 20,
-    lineHeight: 16,
+    gap: 9,
+  },
+
+  mainButtonDisabled: {
+    opacity: 0.65,
+  },
+
+  mainButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  // Chuyển đổi đăng nhập / đăng ký
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  switchText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+
+  switchLink: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  // Footer
+  footerText: {
+    marginTop: 20,
+    color: "#9AA9B5",
+    fontSize: 11,
+    textAlign: "center",
   },
 });
