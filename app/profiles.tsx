@@ -36,21 +36,43 @@ export default function ProfilesRoute() {
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
   const [formVisible, setFormVisible] = useState(false);
   const [verifyPinVisible, setVerifyPinVisible] = useState(false);
+  const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
   const childProfiles = profiles.filter((profile) => profile.role === "child");
   const parentProfile = profiles.find((profile) => profile.role === "parent");
   const isMaxProfilesReached = childProfiles.length >= 5;
 
   const handleProfileClick = (profile: UserProfile) => {
-    selectProfile(profile);
+    if (activeProfile?.id === profile.id || !activeProfile) {
+      selectProfile(profile);
+      router.replace("/(tabs)");
+      return;
+    }
+
+    setPendingProfile(profile);
+    setVerifyPinVisible(true);
+  };
+
+  const handleProfileSwitchVerified = () => {
+    if (!pendingProfile) return;
+    selectProfile(pendingProfile);
+    setPendingProfile(null);
+    setVerifyPinVisible(false);
     router.replace("/(tabs)");
   };
 
+  const handleVerifyPinClose = () => {
+    setPendingProfile(null);
+    setVerifyPinVisible(false);
+  };
+
   const handleSignOut = () => {
+    setPendingProfile(null);
     setVerifyPinVisible(true);
   };
 
   const handleAccountSwitchVerified = () => {
     setVerifyPinVisible(false);
+    setPendingProfile(null);
     signOut();
     router.replace("/");
   };
@@ -241,12 +263,12 @@ export default function ProfilesRoute() {
       <ParentPinModal
         visible={verifyPinVisible}
         mode="verify"
-        onClose={() => setVerifyPinVisible(false)}
-        onSuccess={handleAccountSwitchVerified}
+        onClose={pendingProfile ? handleVerifyPinClose : () => setVerifyPinVisible(false)}
+        onSuccess={pendingProfile ? handleProfileSwitchVerified : handleAccountSwitchVerified}
       />
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F7FB" },
