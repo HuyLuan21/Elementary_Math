@@ -59,21 +59,59 @@ apiClient.interceptors.response.use(
       // Server phản hồi với mã status ngoài dải 2xx
       const data = error.response.data;
       let errorMsg: string | undefined;
+      const isPinRequest = /\/auth\/pin\/(setup|verify)(?:\?|$)/.test(
+        error.config?.url ?? ''
+      );
       if (typeof data === 'object' && data !== null) {
         const responseData = data as Record<string, unknown>;
+        const firstError = Array.isArray(responseData.errors)
+          ? responseData.errors[0]
+          : undefined;
+        const firstErrorMessage =
+          typeof firstError === 'object' &&
+          firstError !== null &&
+          'message' in firstError &&
+          typeof firstError.message === 'string'
+            ? firstError.message
+            : undefined;
+        const errorCode =
+          typeof responseData.code === 'string'
+            ? responseData.code
+            : typeof responseData.message === 'string'
+              ? responseData.message
+              : typeof responseData.error === 'string'
+                ? responseData.error
+                : firstErrorMessage;
+
+        if (isPinRequest) {
+          switch (errorCode) {
+            case 'PIN_INVALID':
+              errorMsg = 'Mã PIN không đúng.';
+              break;
+            case 'PIN_NOT_SET':
+              errorMsg = 'Tài khoản chưa thiết lập mã PIN.';
+              break;
+            case 'PIN_ALREADY_SET':
+              errorMsg = 'Mã PIN đã được thiết lập.';
+              break;
+          }
+        }
+
         if (typeof responseData.message === 'string') {
-          errorMsg = responseData.message;
+          errorMsg ||= responseData.message;
         } else if (Array.isArray(responseData.errors)) {
-          const firstError = responseData.errors[0];
           if (
             typeof firstError === 'object' &&
             firstError !== null &&
             'message' in firstError &&
             typeof firstError.message === 'string'
           ) {
-            errorMsg = firstError.message;
+            errorMsg ||= firstError.message;
           }
         }
+      }
+      if (isPinRequest && error.response.status === 422) {
+        errorMsg = 'Mã PIN phải gồm đúng 4 chữ số.';
       }
       errorMsg ||= `Lỗi từ máy chủ (${error.response.status})`;
       return Promise.reject(new Error(errorMsg));

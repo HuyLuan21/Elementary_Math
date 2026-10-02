@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,10 +10,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import { BrandHeader } from "../../src/components/BrandHeader";
+import { ParentPinModal } from "../../src/components/ParentPinModal";
 
 export default function ParentRoute() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const [verifyPinVisible, setVerifyPinVisible] = useState(false);
+
+  const handleAccountSwitchVerified = () => {
+    setVerifyPinVisible(false);
+    signOut();
+    router.replace("/");
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -79,14 +87,17 @@ export default function ParentRoute() {
 
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => {
-            signOut();
-            router.replace("/");
-          }}
+          onPress={() => setVerifyPinVisible(true)}
         >
           <Text style={styles.logoutBtnText}>🚪 Đăng xuất tài khoản</Text>
         </TouchableOpacity>
       </ScrollView>
+      <ParentPinModal
+        visible={verifyPinVisible}
+        mode="verify"
+        onClose={() => setVerifyPinVisible(false)}
+        onSuccess={handleAccountSwitchVerified}
+      />
     </SafeAreaView>
   );
 }

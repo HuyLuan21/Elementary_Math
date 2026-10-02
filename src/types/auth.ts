@@ -30,6 +30,7 @@ export interface AuthContextType {
   loadingProfiles: boolean;
   profilesError: string | null;
   login: (email: string, user?: UserData, token?: string) => Promise<void>;
+  updateCurrentUser: (user: UserData) => void;
   selectProfile: (profile: UserProfile) => void;
   signOut: () => void;
   addProfile: (profile: ProfileInput) => Promise<void>;

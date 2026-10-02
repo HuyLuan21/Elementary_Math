@@ -15,6 +15,7 @@ import { ProfileInput, UserProfile } from "../src/types/auth";
 import { ProfileCard } from "../src/components/ProfileCard";
 import { EditProfileModal } from "../src/components/EditProfileModal";
 import { BrandHeader } from "../src/components/BrandHeader";
+import { ParentPinModal } from "../src/components/ParentPinModal";
 
 export default function ProfilesRoute() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function ProfilesRoute() {
 
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
   const [formVisible, setFormVisible] = useState(false);
+  const [verifyPinVisible, setVerifyPinVisible] = useState(false);
   const childProfiles = profiles.filter((profile) => profile.role === "child");
   const parentProfile = profiles.find((profile) => profile.role === "parent");
   const isMaxProfilesReached = childProfiles.length >= 5;
@@ -44,6 +46,11 @@ export default function ProfilesRoute() {
   };
 
   const handleSignOut = () => {
+    setVerifyPinVisible(true);
+  };
+
+  const handleAccountSwitchVerified = () => {
+    setVerifyPinVisible(false);
     signOut();
     router.replace("/");
   };
@@ -230,6 +237,12 @@ export default function ProfilesRoute() {
         }}
         onSave={handleSaveProfile}
         onDelete={handleDeleteProfile}
+      />
+      <ParentPinModal
+        visible={verifyPinVisible}
+        mode="verify"
+        onClose={() => setVerifyPinVisible(false)}
+        onSuccess={handleAccountSwitchVerified}
       />
     </SafeAreaView>
   );

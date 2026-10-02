@@ -97,6 +97,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveProfile(profile);
   };
 
+  const updateCurrentUser = (user: UserData) => {
+    setCurrentUser(user);
+  };
+
   const signOut = () => {
     setUserEmail(null);
     setCurrentUser(null);
@@ -167,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         editProfile,
         deleteProfile,
         refreshProfiles,
+        updateCurrentUser,
       }}
     >
       {children}

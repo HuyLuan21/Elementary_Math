@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,10 +11,12 @@ import { useRouter } from "expo-router";
 import * as Speech from "expo-speech";
 import { useAuth } from "../../src/context/AuthContext";
 import { BrandHeader } from "../../src/components/BrandHeader";
+import { ParentPinModal } from "../../src/components/ParentPinModal";
 
 export default function HomeRoute() {
   const router = useRouter();
   const { activeProfile, signOut } = useAuth();
+  const [verifyPinVisible, setVerifyPinVisible] = useState(false);
 
   const profile = activeProfile || {
     id: "kid-1",
@@ -44,6 +46,11 @@ export default function HomeRoute() {
   };
 
   const handleSignOut = () => {
+    setVerifyPinVisible(true);
+  };
+
+  const handleAccountSwitchVerified = () => {
+    setVerifyPinVisible(false);
     signOut();
     router.replace("/");
   };
@@ -252,7 +259,12 @@ export default function HomeRoute() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
+      <ParentPinModal
+        visible={verifyPinVisible}
+        mode="verify"
+        onClose={() => setVerifyPinVisible(false)}
+        onSuccess={handleAccountSwitchVerified}
+      />
     </SafeAreaView>
   );
 }
