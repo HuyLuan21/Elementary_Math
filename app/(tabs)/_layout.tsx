@@ -8,21 +8,22 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#1A1A1A",
-          borderTopColor: "#262626",
-          borderTopWidth: 1,
-          height: 68,
-          paddingHorizontal: 16,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#FFFFFF",
+          borderTopWidth: 0,
+          height: 74,
+          paddingHorizontal: 12,
           paddingTop: 6,
           paddingBottom: 8,
         },
         tabBarItemStyle: {
           borderRadius: 9999,
           overflow: "hidden",
+          marginHorizontal: 4,
         },
         tabBarActiveBackgroundColor: "#FFD167",
         tabBarActiveTintColor: "#3F484F",
-        tabBarInactiveTintColor: "#8C8C8C",
+        tabBarInactiveTintColor: "#7B838C",
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "700",
@@ -55,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="parent"
         options={{
-          title: "Ba mẹ",
+          title: "Ba Mẹ",
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="family-restroom" size={22} color={color} />
           ),
