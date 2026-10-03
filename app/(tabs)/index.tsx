@@ -21,20 +21,20 @@ import { useAuth } from "../../src/context/AuthContext";
 import { ParentPinModal } from "../../src/components/ParentPinModal";
 import { emathApi, KidCornerData } from "../../src/services/emathApi";
 
-import { playRealAnimalSound } from "../../src/utils/soundPlayer";
-
 const { width } = Dimensions.get("window");
 
 export default function HomeRoute() {
   const router = useRouter();
   const { activeProfile, authToken, signOut } = useAuth();
   const [pinModalVisible, setPinModalVisible] = useState(false);
-  const [kidCornerData, setKidCornerData] = useState<KidCornerData | null>(null);
+  const [kidCornerData, setKidCornerData] = useState<KidCornerData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   const profile = activeProfile || {
-    id: "kid-1",
-    name: "Bé Na",
+    id: "00000000-0000-4000-8000-000000000101",
+    name: "Bé Bông",
     role: "child" as const,
     grade: "Lớp 1",
     avatarColor: "#FFDF9B",
@@ -49,7 +49,10 @@ export default function HomeRoute() {
     if (!activeProfile?.id) return;
     try {
       setLoading(true);
-      const data = await emathApi.getKidCorner(activeProfile.id, authToken || undefined);
+      const data = await emathApi.getKidCorner(
+        activeProfile.id,
+        authToken || undefined,
+      );
       if (data) {
         setKidCornerData(data);
       }
@@ -85,9 +88,16 @@ export default function HomeRoute() {
     } catch (e) {}
   };
 
-  // Phát âm thanh động vật thật khi bấm vào sticker thú cưng
-  const playAnimalSound = (animalKey: string, soundText: string) => {
-    playRealAnimalSound(animalKey, soundText);
+  // Phát âm khi bấm vào sticker thú cưng
+  const playAnimalSound = (animalName: string, soundText: string) => {
+    try {
+      Speech.stop();
+      Speech.speak(soundText, {
+        language: "vi-VN",
+        pitch: 1.25,
+        rate: 1.05,
+      });
+    } catch (e) {}
   };
 
   const handleSwitchProfile = () => {
@@ -160,73 +170,57 @@ export default function HomeRoute() {
     },
   ];
 
-  // Danh sách bạn nhỏ (Stickers) có âm thanh động vật thật
+  // Danh sách bạn nhỏ (Stickers)
   const STICKERS = [
     {
       id: 1,
-      animalKey: "cat",
-      name: "Mèo Mướp",
-      emoji: "🐱",
-      tag: "Kêu Meo Meo",
-      bgColor: "#FDF2F8",
-      tagBg: "#FFDAD8",
-      tagColor: "#AE2F34",
-      sound: "Meo meo! Mèo mướp xin chào bé!",
-    },
-    {
-      id: 2,
-      animalKey: "dog",
-      name: "Cún Vàng",
-      emoji: "🐶",
-      tag: "Kêu Gâu Gâu",
-      bgColor: "#FFFBEB",
-      tagBg: "#C6E7FF",
-      tagColor: "#00658D",
-      sound: "Gâu gâu! Cún vàng chúc mừng bé học giỏi!",
-    },
-    {
-      id: 3,
-      animalKey: "duck",
-      name: "Vịt Vàng",
-      emoji: "🦆",
-      tag: "Kêu Cạp Cạp",
-      bgColor: "#FEFCE8",
-      tagBg: "#FFD167",
-      tagColor: "#251A00",
-      sound: "Cạp cạp! Vịt con bơi lội tung tăng!",
-    },
-    {
-      id: 4,
-      animalKey: "chicken",
-      name: "Gà Con",
-      emoji: "🐥",
-      tag: "Kêu Chiếp Chiếp",
-      bgColor: "#FFF7ED",
-      tagBg: "#FFDF9B",
-      tagColor: "#785A00",
-      sound: "Chiếp chiếp! Bé chăm chỉ quá!",
-    },
-    {
-      id: 5,
-      animalKey: "frog",
-      name: "Ếch Xanh",
-      emoji: "🐸",
-      tag: "Kêu Ộp Ộp",
-      bgColor: "#ECFDF5",
-      tagBg: "#D1FAE5",
-      tagColor: "#065F46",
-      sound: "Ộp ộp! Ếch xanh nhảy thật xa!",
-    },
-    {
-      id: 6,
-      animalKey: "rabbit",
       name: "Thỏ Trắng",
       emoji: "🐰",
       tag: "Nhảy tưng tưng",
+      bgColor: "#FDF2F8",
+      tagBg: "#FFDAD8",
+      tagColor: "#AE2F34",
+      sound: "Thỏ con nhảy nhót! Boing boing!",
+    },
+    {
+      id: 2,
+      name: "Cáo Nhỏ",
+      emoji: "🦊",
+      tag: "Thông thái",
+      bgColor: "#FFF7ED",
+      tagBg: "#FFDF9B",
+      tagColor: "#785A00",
+      sound: "Cáo nhỏ thông thái xin chào bé!",
+    },
+    {
+      id: 3,
+      name: "Gà Con",
+      emoji: "🐥",
+      tag: "Chăm chỉ",
+      bgColor: "#FEFCE8",
+      tagBg: "#FFD167",
+      tagColor: "#251A00",
+      sound: "Chiếp chiếp! Bé học giỏi quá!",
+    },
+    {
+      id: 4,
+      name: "Cún Vàng",
+      emoji: "🐶",
+      tag: "Trung thành",
+      bgColor: "#FFFBEB",
+      tagBg: "#C6E7FF",
+      tagColor: "#00658D",
+      sound: "Gâu gâu! Cún vàng chúc mừng bé!",
+    },
+    {
+      id: 5,
+      name: "Chuột Nhí",
+      emoji: "🐭",
+      tag: "Nhanh nhẹn",
       bgColor: "#FAF5FF",
       tagBg: "#F3EAFF",
       tagColor: "#6F7880",
-      sound: "Boing boing! Thỏ con nhảy nhót vui ghê!",
+      sound: "Chít chít! Chuột con siêu nhanh nhẹn!",
     },
   ];
 
@@ -242,7 +236,9 @@ export default function HomeRoute() {
         >
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarInner}>
-              <Text style={styles.avatarEmoji}>{profile.avatarIcon || "👧"}</Text>
+              <Text style={styles.avatarEmoji}>
+                {profile.avatarIcon || "👧"}
+              </Text>
             </View>
             <View style={styles.avatarLevelBadge}>
               <Text style={styles.avatarLevelText}>1</Text>
@@ -253,7 +249,9 @@ export default function HomeRoute() {
             <View style={styles.nameRow}>
               <Text style={styles.profileName}>{profile.name || "Bé Na"}</Text>
               <View style={styles.gradeBadge}>
-                <Text style={styles.gradeBadgeText}>{profile.grade || "Lớp 1"}</Text>
+                <Text style={styles.gradeBadgeText}>
+                  {profile.grade || "Lớp 1"}
+                </Text>
               </View>
             </View>
             <Text style={styles.subProfileText}>Học sinh chăm ngoan</Text>
@@ -341,9 +339,7 @@ export default function HomeRoute() {
                 <Text style={styles.leadBadgeIcon}>👑</Text>
                 <Text style={styles.leadBadgeText}>Đang dẫn đầu!</Text>
               </View>
-              <Text style={styles.encouragementText}>
-                Bé học rất chăm! 🌟
-              </Text>
+              <Text style={styles.encouragementText}>Bé học rất chăm! 🌟</Text>
             </View>
           </View>
         </View>
@@ -352,7 +348,9 @@ export default function HomeRoute() {
         <View style={styles.statsSummaryRow}>
           {/* Huy hiệu */}
           <View style={styles.statPillCard}>
-            <View style={[styles.statIconCircle, { backgroundColor: "#FFDF9B" }]}>
+            <View
+              style={[styles.statIconCircle, { backgroundColor: "#FFDF9B" }]}
+            >
               <Text style={styles.statIconText}>🏅</Text>
             </View>
             <Text style={styles.statCardLabel}>Huy hiệu</Text>
@@ -361,7 +359,9 @@ export default function HomeRoute() {
 
           {/* Ngôi sao */}
           <View style={styles.statPillCard}>
-            <View style={[styles.statIconCircle, { backgroundColor: "#FFD167" }]}>
+            <View
+              style={[styles.statIconCircle, { backgroundColor: "#FFD167" }]}
+            >
               <Text style={styles.statIconText}>⭐</Text>
             </View>
             <Text style={styles.statCardLabel}>Ngôi sao</Text>
@@ -372,7 +372,9 @@ export default function HomeRoute() {
 
           {/* Sticker bạn nhỏ */}
           <View style={styles.statPillCard}>
-            <View style={[styles.statIconCircle, { backgroundColor: "#FFDAD8" }]}>
+            <View
+              style={[styles.statIconCircle, { backgroundColor: "#FFDAD8" }]}
+            >
               <Text style={styles.statIconText}>🐾</Text>
             </View>
             <Text style={styles.statCardLabel}>Bạn nhỏ</Text>
@@ -385,7 +387,12 @@ export default function HomeRoute() {
           {/* Header Row */}
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionTitleGroup}>
-              <View style={[styles.sectionPillIndicator, { backgroundColor: "#4DA8DA" }]} />
+              <View
+                style={[
+                  styles.sectionPillIndicator,
+                  { backgroundColor: "#4DA8DA" },
+                ]}
+              />
               <Text style={styles.sectionHeading}>Bộ sưu tập Huy hiệu</Text>
             </View>
             <View style={[styles.sectionBadge, { backgroundColor: "#C6E7FF" }]}>
@@ -465,7 +472,9 @@ export default function HomeRoute() {
                         <View
                           style={[
                             styles.badgeProgressFill,
-                            { width: `${(badge.progressRatio || 0.66) * 100}%` },
+                            {
+                              width: `${(badge.progressRatio || 0.66) * 100}%`,
+                            },
                           ]}
                         />
                       </View>
@@ -491,7 +500,12 @@ export default function HomeRoute() {
           {/* Header Row */}
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionTitleGroup}>
-              <View style={[styles.sectionPillIndicator, { backgroundColor: "#FF7372" }]} />
+              <View
+                style={[
+                  styles.sectionPillIndicator,
+                  { backgroundColor: "#FF7372" },
+                ]}
+              />
               <Text style={styles.sectionHeading}>Bạn Nhỏ Đã Thu Thập</Text>
             </View>
             <View style={[styles.sectionBadge, { backgroundColor: "#FFDAD8" }]}>
@@ -520,7 +534,7 @@ export default function HomeRoute() {
                 key={sticker.id}
                 style={styles.sticker3DCard}
                 activeOpacity={0.8}
-                onPress={() => playAnimalSound(sticker.animalKey || sticker.name, sticker.sound)}
+                onPress={() => playAnimalSound(sticker.name, sticker.sound)}
               >
                 {/* Animal Avatar Icon */}
                 <View
@@ -542,7 +556,11 @@ export default function HomeRoute() {
                     { backgroundColor: sticker.tagBg },
                   ]}
                 >
-                  <Ionicons name="sparkles" size={10} color={sticker.tagColor} />
+                  <Ionicons
+                    name="sparkles"
+                    size={10}
+                    color={sticker.tagColor}
+                  />
                   <Text
                     style={[
                       styles.stickerTraitText,

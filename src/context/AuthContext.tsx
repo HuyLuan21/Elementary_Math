@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, AuthContextType } from '../types/auth';
 import { UserData, setAuthToken as setApiAuthToken } from '../services/authApi';
 import { profileApi, ApiProfileData } from '../services/profileApi';
+import { storage } from '../utils/storage';
 
 const AVATAR_COLORS = ['#E11D48', '#0EA5E9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
 const AVATAR_ICONS = ['🦁', '🦄', '🐼', '🐶', '🐱', '🦊', '🐯', '🐰'];
@@ -15,6 +16,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState<boolean>(false);
+
+  // Tự động khôi phục phiên đăng nhập và hồ sơ bé đang chọn khi F5 / mở lại app
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const storedToken = await storage.getItem('emath_auth_token');
+        const storedEmail = await storage.getItem('emath_user_email');
+        const storedUser = await storage.getItem('emath_current_user');
+        const storedProfile = await storage.getItem('emath_active_profile');
+
+        if (storedToken) {
+          setAuthToken(storedToken);
+          setApiAuthToken(storedToken);
+        }
+        if (storedEmail) setUserEmail(storedEmail);
+        if (storedUser) {
+          try {
+            setCurrentUser(JSON.parse(storedUser));
+          } catch (e) {}
+        }
+        if (storedProfile) {
+          try {
+            setActiveProfile(JSON.parse(storedProfile));
+          } catch (e) {}
+        }
+
+        if (storedToken) {
+          const u = storedUser ? JSON.parse(storedUser) : null;
+          await fetchProfiles(storedToken, u);
+        }
+      } catch (e) {
+        console.warn('Lỗi khôi phục phiên đăng nhập:', e);
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const mapBackendProfiles = (apiProfiles: ApiProfileData[], user?: UserData | null): UserProfile[] => {
     const parentName = (user?.full_name && user.full_name.trim()) || 'Phụ Huynh';
@@ -51,7 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfiles(mapped);
     } catch (error) {
       console.warn('Lỗi khi tải hồ sơ từ backend:', error);
-      // Fallback: ít nhất có profile phụ huynh
       setProfiles(mapBackendProfiles([], user || currentUser));
     } finally {
       setLoadingProfiles(false);
@@ -60,12 +97,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, user?: UserData, token?: string) => {
     setUserEmail(email);
+    await storage.setItem('emath_user_email', email);
+
     if (user) {
       setCurrentUser(user);
+      await storage.setItem('emath_current_user', JSON.stringify(user));
     }
     if (token) {
       setAuthToken(token);
       setApiAuthToken(token);
+      await storage.setItem('emath_auth_token', token);
       await fetchProfiles(token, user);
     }
   };
@@ -78,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const selectProfile = (profile: UserProfile) => {
     setActiveProfile(profile);
+    storage.setItem('emath_active_profile', JSON.stringify(profile));
   };
 
   const signOut = () => {
@@ -87,6 +129,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setApiAuthToken(null);
     setActiveProfile(null);
     setProfiles([]);
+    storage.removeItem('emath_auth_token');
+    storage.removeItem('emath_user_email');
+    storage.removeItem('emath_current_user');
+    storage.removeItem('emath_active_profile');
   };
 
   const addProfile = async (name: string, grade?: string, avatarUrl?: string) => {

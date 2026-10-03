@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { BrandHeader } from "../../src/components/BrandHeader";
 import { useAuth } from "../../src/context/AuthContext";
@@ -179,6 +179,10 @@ export default function JourneyRoute() {
   const [chapters, setChapters] = useState<JourneyChapter[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const chapterLayouts = useRef<{ [key: string]: number }>({});
+  const hasAutoScrolled = useRef<boolean>(false);
+
   // Animation nhảy nhót cho Bong bóng "BẮT ĐẦU"
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
@@ -186,6 +190,7 @@ export default function JourneyRoute() {
   const loadJourney = useCallback(async () => {
     try {
       setLoading(true);
+      hasAutoScrolled.current = false;
       const data = await emathApi.getJourney(activeProfile?.id, authToken || undefined);
       if (data && data.length > 0) {
         setChapters(data);
@@ -231,9 +236,11 @@ export default function JourneyRoute() {
     }
   }, [activeProfile?.id, authToken]);
 
-  useEffect(() => {
-    loadJourney();
-  }, [loadJourney]);
+  useFocusEffect(
+    useCallback(() => {
+      loadJourney();
+    }, [loadJourney])
+  );
 
   useEffect(() => {
     Animated.loop(
@@ -278,11 +285,18 @@ export default function JourneyRoute() {
 
       {/* SCROLLABLE WINDING MAP */}
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {chapters.map((chap, cIdx) => (
-          <View key={chap.id} style={styles.chapterSection}>
+          <View
+            key={chap.id}
+            style={styles.chapterSection}
+            onLayout={(e) => {
+              chapterLayouts.current[chap.id] = e.nativeEvent.layout.y;
+            }}
+          >
             {/* Chapter Banner */}
             <View style={[styles.chapterBanner, { borderColor: chap.color }]}>
               <View style={styles.chapterInfo}>
@@ -333,7 +347,25 @@ export default function JourneyRoute() {
                 }
 
                 return (
-                  <View key={item.id} style={styles.nodeWrapper}>
+                  <View
+                    key={item.id}
+                    style={styles.nodeWrapper}
+                    onLayout={(e) => {
+                      if (isActive && !hasAutoScrolled.current) {
+                        hasAutoScrolled.current = true;
+                        const nodeY = e.nativeEvent.layout.y;
+                        const chapY = chapterLayouts.current[chap.id] || 0;
+                        const targetY = Math.max(0, chapY + nodeY - 180);
+
+                        setTimeout(() => {
+                          scrollViewRef.current?.scrollTo({
+                            y: targetY,
+                            animated: true,
+                          });
+                        }, 250);
+                      }
+                    }}
+                  >
                     {/* SPEECH BUBBLE FOR ACTIVE NODE */}
                     {isActive && (
                       <Animated.View

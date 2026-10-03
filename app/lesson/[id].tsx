@@ -157,15 +157,21 @@ export default function LessonScreen() {
 
   const currentQuestion = questions[currentIndex] || questions[0];
 
-  // Phát âm câu hỏi khi chuyển câu (chỉ đọc khi đã load xong và đang làm bài)
+  // Phát âm câu hỏi khi chuyển câu & Cập nhật thanh tiến trình chuẩn 100%
   useEffect(() => {
     if (!loading && currentQuestion && !isCompleted && !showExitModal) {
       speak(currentQuestion.questionText);
     }
 
     if (questions.length > 0) {
+      const targetPercent = isCompleted
+        ? 100
+        : isAnswerChecked
+        ? ((currentIndex + 1) / questions.length) * 100
+        : (currentIndex / questions.length) * 100;
+
       Animated.timing(progressAnim, {
-        toValue: (currentIndex / questions.length) * 100,
+        toValue: targetPercent,
         duration: 350,
         useNativeDriver: false,
       }).start();
@@ -174,7 +180,7 @@ export default function LessonScreen() {
     return () => {
       stopSpeech();
     };
-  }, [currentIndex, loading, isCompleted, currentQuestion?.id, showExitModal, questions.length]);
+  }, [currentIndex, loading, isCompleted, isAnswerChecked, currentQuestion?.id, showExitModal, questions.length]);
 
   const handleSpeakQuestion = () => {
     if (currentQuestion?.questionText) {
@@ -191,7 +197,9 @@ export default function LessonScreen() {
   const handleCheckAnswer = () => {
     if (!selectedOptionId || isAnswerChecked || !currentQuestion) return;
 
-    const correct = selectedOptionId === currentQuestion.correctAnswerId;
+    const correct =
+      String(selectedOptionId).trim().toLowerCase() ===
+      String(currentQuestion.correctAnswerId).trim().toLowerCase();
     setIsCorrect(correct);
     setIsAnswerChecked(true);
 
@@ -255,12 +263,13 @@ export default function LessonScreen() {
         }).start();
 
         // Gửi kết quả về Backend Database để lưu trữ & mở khóa bài kế tiếp
-        if (id && activeProfile?.id) {
+        const targetProfileId = activeProfile?.id || "00000000-0000-4000-8000-000000000101";
+        if (id && targetProfileId) {
           try {
             await emathApi.submitLesson(
               id,
-              activeProfile.id,
-              correctAnswersCount + (isCorrect ? 1 : 0),
+              targetProfileId,
+              correctAnswersCount,
               questions.length,
               authToken || undefined
             );
@@ -271,6 +280,10 @@ export default function LessonScreen() {
       }
     });
   };
+
+  const totalQuestions = questions.length;
+  const accuracyRate = totalQuestions > 0 ? Math.round((correctAnswersCount / totalQuestions) * 100) : 0;
+  const starsEarned = accuracyRate >= 80 ? 3 : accuracyRate >= 50 ? 2 : accuracyRate >= 20 ? 1 : 0;
 
   if (loading || !currentQuestion || questions.length === 0) {
     return (
@@ -590,12 +603,28 @@ export default function LessonScreen() {
           <View style={styles.victoryCard}>
             {/* Big Trophy / Mascot */}
             <View style={styles.victoryMascotCircle}>
-              <Text style={styles.victoryTrophyEmoji}>🏆</Text>
+              <Text style={styles.victoryTrophyEmoji}>
+                {accuracyRate >= 80 ? "🏆" : accuracyRate >= 50 ? "⭐" : accuracyRate > 0 ? "🌱" : "🥺"}
+              </Text>
             </View>
 
-            <Text style={styles.victoryHeading}>BÀI HỌC HOÀN TẤT!</Text>
+            <Text style={styles.victoryHeading}>
+              {accuracyRate >= 80
+                ? "BÀI HỌC HOÀN TẤT!"
+                : accuracyRate >= 50
+                ? "HOÀN THÀNH TỐT!"
+                : accuracyRate > 0
+                ? "CỐ GẮNG LẦN SAU!"
+                : "CHƯA ĐẠT RỒI!"}
+            </Text>
             <Text style={styles.victorySub}>
-              Bé đã làm rất xuất sắc và ghi nhớ bài cực nhanh!
+              {accuracyRate >= 80
+                ? "Bé đã làm rất xuất sắc và ghi nhớ bài cực nhanh! 🎉"
+                : accuracyRate >= 50
+                ? `Bé đã trả lời đúng ${correctAnswersCount}/${totalQuestions} câu, cùng luyện thêm để đạt 3 sao nhé! 🌟`
+                : accuracyRate > 0
+                ? `Bé đã trả lời đúng ${correctAnswersCount}/${totalQuestions} câu, hãy thử lại để đạt kết quả cao hơn nhé! 💪`
+                : `Bé chưa trả lời đúng câu nào (0/${totalQuestions}). Hãy ấn nút bên dưới và làm lại nhé! 🚀`}
             </Text>
 
             {/* Stat Badges */}
@@ -603,21 +632,23 @@ export default function LessonScreen() {
               {/* XP */}
               <View style={styles.victoryStatCard}>
                 <Text style={styles.victoryStatEmoji}>⚡</Text>
-                <Text style={styles.victoryStatNumber}>+{earnedXp + 10}</Text>
+                <Text style={styles.victoryStatNumber}>+{earnedXp + (accuracyRate >= 50 ? 10 : 5)}</Text>
                 <Text style={styles.victoryStatLabel}>Tổng XP</Text>
               </View>
 
               {/* Accuracy */}
               <View style={styles.victoryStatCard}>
                 <Text style={styles.victoryStatEmoji}>🎯</Text>
-                <Text style={styles.victoryStatNumber}>100%</Text>
-                <Text style={styles.victoryStatLabel}>Chính xác</Text>
+                <Text style={styles.victoryStatNumber}>{accuracyRate}%</Text>
+                <Text style={styles.victoryStatLabel}>
+                  {correctAnswersCount}/{totalQuestions} Đúng
+                </Text>
               </View>
 
               {/* Stars */}
               <View style={styles.victoryStatCard}>
                 <Text style={styles.victoryStatEmoji}>⭐</Text>
-                <Text style={styles.victoryStatNumber}>3/3</Text>
+                <Text style={styles.victoryStatNumber}>{starsEarned}/3</Text>
                 <Text style={styles.victoryStatLabel}>Ngôi sao</Text>
               </View>
             </View>

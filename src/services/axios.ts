@@ -4,26 +4,37 @@ import { Platform } from 'react-native';
 
 // Helper to determine the backend API base URL
 export const getApiBaseUrl = (): string => {
-  // 1. Ưu tiên lấy từ biến môi trường .env (nếu có)
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
-  // 2. Web: Sử dụng hostname hiện tại của trình duyệt (localhost / 127.0.0.1 / IP LAN)
+  // 1. Web: Sử dụng hostname hiện tại của trình duyệt (localhost / IP LAN)
   if (Platform.OS === 'web') {
     const hostname =
       typeof window !== 'undefined' && window.location?.hostname ? window.location.hostname : 'localhost';
     return `http://${hostname}:6001/api`;
   }
 
-  // 3. If running via Expo Go / dev client, connect to the host machine IP
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const hostIp = hostUri.split(':')[0];
-    return `http://${hostIp}:6001/api`;
+  // 2. Nếu EXPO_PUBLIC_API_URL được cấu hình tường minh với IP LAN thật
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
   }
 
-  // 4. Android emulator
+  // 3. Tự động trích xuất IP LAN của máy tính host từ Expo dev server (Expo Go / Dev Client)
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (Constants as any).manifest2?.extra?.expoClient?.hostUri ||
+    (Constants as any).manifest?.debuggerHost ||
+    (Constants as any).manifest?.hostUri ||
+    (Constants as any).experienceUrl;
+
+  if (hostUri) {
+    const cleanUri = String(hostUri).replace(/^[a-zA-Z]+:\/\//, '');
+    const hostIp = cleanUri.split(':')[0];
+    if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+      console.log(`[API Config] Đã tự động kết nối Backend qua IP máy tính: http://${hostIp}:6001/api`);
+      return `http://${hostIp}:6001/api`;
+    }
+  }
+
+  // 4. Android emulator mặc định
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:6001/api';
   }
