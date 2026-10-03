@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -18,6 +19,9 @@ import {
   ProfileAchievements,
   StickerAchievement,
 } from "../../src/types/achievement";
+import { ParentPinModal } from "../../src/components/ParentPinModal";
+import { BrandHeader } from "../../src/components/BrandHeader";
+import * as Speech from "expo-speech";
 
 type LoadState = {
   profileId: string | null;

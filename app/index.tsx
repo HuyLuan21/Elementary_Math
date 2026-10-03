@@ -50,36 +50,6 @@ export default function LoginRoute() {
   const clearMessages = () => {
     setErrorMessage("");
     setSuccessMessage("");
-<<<<<<< HEAD
-
-    if (!email.trim()) {
-      setErrorMessage("Vui lòng nhập Email!");
-      return;
-    }
-    if (!password.trim()) {
-      setErrorMessage("Vui lòng nhập Mật khẩu!");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await authApi.login({ email, password });
-      setIsLoading(false);
-
-      if (res.data) {
-        await login(res.data.email || email, res.data, res.access_token);
-      } else {
-        await login(email, undefined, res.access_token);
-      }
-      router.replace("/profiles");
-    } catch (err: any) {
-      setIsLoading(false);
-      setErrorMessage(
-        err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản!",
-      );
-    }
-=======
->>>>>>> origin/maichi
   };
 
   // Xử lý đăng nhập tài khoản phụ huynh

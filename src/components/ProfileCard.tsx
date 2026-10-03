@@ -21,62 +21,66 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   const age = getAge(profile.birthDate);
 
   return (
-    <Pressable
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.profileCard,
         isSelected && styles.profileCardSelected,
-        pressed && styles.profileCardPressed,
       ]}
-      onPress={() => onPress(profile)}
-      accessibilityRole="button"
-      accessibilityLabel={`Chọn hồ sơ ${profile.name}`}
     >
-      <View style={styles.cardTopRow}>
-        <View style={[styles.avatarBox, { backgroundColor: profile.avatarColor }]}>
-          <Text style={styles.avatarEmoji}>{profile.avatarIcon}</Text>
-          {isSelected && (
-            <View style={styles.selectedMark}>
-              <Check size={13} color="#FFFFFF" strokeWidth={3} />
-            </View>
-          )}
-        </View>
-        {(onEdit && profile.role === 'child') || isEditMode ? (
-          <Pressable
-            style={styles.editButton}
-            onPress={(event) => {
-              event.stopPropagation();
-              onEdit?.(profile);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`Sửa hồ sơ ${profile.name}`}
-            hitSlop={8}
-          >
-            <Pencil size={16} color="#6B7280" />
-          </Pressable>
-        ) : null}
-      </View>
-
-      <View style={styles.profileInfo}>
-        <Text style={styles.profileName} numberOfLines={1}>
-          {profile.name}
-        </Text>
-        <Text style={styles.profileMeta} numberOfLines={1}>
-          {profile.role === 'parent'
-            ? 'Phụ huynh'
-            : age !== null
-              ? `${age} tuổi`
-              : 'Hồ sơ học tập'}
-        </Text>
-        {profile.role === 'child' && profile.totalStars != null && profile.totalStars > 0 ? (
-          <View style={styles.starsRow}>
-            <Star size={14} color="#E3A900" fill="#FFC928" />
-            <Text style={styles.starsText}>{profile.totalStars} ngôi sao</Text>
+      <Pressable
+        style={({ pressed }) => [
+          styles.cardBody,
+          pressed && styles.profileCardPressed,
+        ]}
+        onPress={() => onPress(profile)}
+        accessibilityRole="button"
+        accessibilityLabel={`Chọn hồ sơ ${profile.name}`}
+      >
+        <View style={styles.cardTopRow}>
+          <View style={[styles.avatarBox, { backgroundColor: profile.avatarColor }]}>
+            <Text style={styles.avatarEmoji}>{profile.avatarIcon}</Text>
+            {isSelected && (
+              <View style={styles.selectedMark}>
+                <Check size={13} color="#FFFFFF" strokeWidth={3} />
+              </View>
+            )}
           </View>
-        ) : null}
-      </View>
+        </View>
 
-      {isSelected ? <Text style={styles.selectedLabel}>Đang học</Text> : null}
-    </Pressable>
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName} numberOfLines={1}>
+            {profile.name}
+          </Text>
+          <Text style={styles.profileMeta} numberOfLines={1}>
+            {profile.role === 'parent'
+              ? 'Phụ huynh'
+              : age !== null
+                ? `${age} tuổi`
+                : 'Hồ sơ học tập'}
+          </Text>
+          {profile.role === 'child' && profile.totalStars != null && profile.totalStars > 0 ? (
+            <View style={styles.starsRow}>
+              <Star size={14} color="#E3A900" fill="#FFC928" />
+              <Text style={styles.starsText}>{profile.totalStars} ngôi sao</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {isSelected ? <Text style={styles.selectedLabel}>Đang học</Text> : null}
+      </Pressable>
+
+      {(onEdit && profile.role === 'child') || isEditMode ? (
+        <Pressable
+          style={styles.editButton}
+          onPress={() => onEdit?.(profile)}
+          accessibilityRole="button"
+          accessibilityLabel={`Sửa hồ sơ ${profile.name}`}
+          hitSlop={8}
+        >
+          <Pencil size={16} color="#6B7280" />
+        </Pressable>
+      ) : null}
+    </View>
   );
 };
 
@@ -99,14 +103,11 @@ const styles = StyleSheet.create({
     flexBasis: 260,
     flexGrow: 1,
     margin: 7,
-    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#DDE5EC',
     backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    position: 'relative',
   },
   profileCardSelected: {
     borderColor: '#35A9E0',
@@ -115,6 +116,13 @@ const styles = StyleSheet.create({
   },
   profileCardPressed: {
     opacity: 0.85,
+  },
+  cardBody: {
+    flex: 1,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
   cardTopRow: {
     position: 'relative',
@@ -142,14 +150,15 @@ const styles = StyleSheet.create({
   },
   editButton: {
     position: 'absolute',
-    top: -7,
-    right: -14,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#F4F7FB',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   profileInfo: {
     flex: 1,

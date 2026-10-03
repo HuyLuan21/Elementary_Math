@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, AuthContextType, ProfileInput } from '../types/auth';
 import { UserData, setAuthToken as setApiAuthToken } from '../services/authApi';
 import { profileApi, ApiProfileData } from '../services/profileApi';
