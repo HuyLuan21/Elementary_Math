@@ -16,6 +16,7 @@ import * as Speech from "expo-speech";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { emathApi, QuestionData } from "../../src/services/emathApi";
+import { storage } from "../../src/utils/storage";
 
 const { width } = Dimensions.get("window");
 
@@ -104,6 +105,8 @@ export default function LessonScreen() {
   const [questions, setQuestions] = useState<QuestionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [lessonTitle, setLessonTitle] = useState("Bài tập toán vui nhộn");
+  const [isLockedLesson, setIsLockedLesson] = useState(false);
+  const [lockMessage, setLockMessage] = useState<string>("");
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -136,20 +139,64 @@ export default function LessonScreen() {
     }
     try {
       setLoading(true);
-      const data = await emathApi.getLessonQuestions(id, authToken || undefined);
+      setIsLockedLesson(false);
+
+      // Lấy profileId từ React state hoặc trực tiếp từ storage (cho trường hợp F5 / đổi URL trên web)
+      let currentProfileId = activeProfile?.id;
+      if (!currentProfileId) {
+        try {
+          const storedProfile = await storage.getItem("emath_active_profile");
+          if (storedProfile) {
+            const parsed = JSON.parse(storedProfile);
+            currentProfileId = parsed?.id;
+          }
+        } catch (e) {}
+      }
+
+      let currentToken = authToken;
+      if (!currentToken) {
+        try {
+          currentToken = await storage.getItem("emath_auth_token");
+        } catch (e) {}
+      }
+
+      const data = await emathApi.getLessonQuestions(
+        id,
+        currentToken || undefined,
+        currentProfileId || undefined
+      );
+
       if (data && data.questions && data.questions.length > 0) {
         setQuestions(data.questions);
         if (data.title) setLessonTitle(data.title);
       } else {
         setQuestions(FALLBACK_QUESTIONS);
       }
-    } catch (err) {
-      console.warn("Lỗi tải câu hỏi từ DB, dùng fallback:", err);
-      setQuestions(FALLBACK_QUESTIONS);
+    } catch (err: any) {
+      const responseData = err?.response?.data;
+      if (err?.response?.status === 403 || responseData?.isLocked) {
+        setIsLockedLesson(true);
+        const msg =
+          responseData?.message ||
+          "Bài học này đang bị khóa 🔒. Bé hãy hoàn thành bài học trước để mở khóa nhé!";
+        setLockMessage(msg);
+        speak(msg, { pitch: 1.2, rate: 0.95 });
+        return;
+      }
+      console.warn("Lỗi tải câu hỏi từ DB:", err);
+      // Chỉ cho phép fallback nếu là bài đầu tiên của chương 1
+      if (id === "00000000-0000-4000-8000-000000000500" || id === "1") {
+        setQuestions(FALLBACK_QUESTIONS);
+      } else {
+        setIsLockedLesson(true);
+        const msg = "Bài học này đang bị khóa 🔒. Bé hãy hoàn thành bài học trước để mở khóa nhé!";
+        setLockMessage(msg);
+        speak(msg, { pitch: 1.2, rate: 0.95 });
+      }
     } finally {
       setLoading(false);
     }
-  }, [id, authToken]);
+  }, [id, authToken, activeProfile?.id]);
 
   useEffect(() => {
     loadLessonData();
@@ -167,8 +214,8 @@ export default function LessonScreen() {
       const targetPercent = isCompleted
         ? 100
         : isAnswerChecked
-        ? ((currentIndex + 1) / questions.length) * 100
-        : (currentIndex / questions.length) * 100;
+          ? ((currentIndex + 1) / questions.length) * 100
+          : (currentIndex / questions.length) * 100;
 
       Animated.timing(progressAnim, {
         toValue: targetPercent,
@@ -180,7 +227,15 @@ export default function LessonScreen() {
     return () => {
       stopSpeech();
     };
-  }, [currentIndex, loading, isCompleted, isAnswerChecked, currentQuestion?.id, showExitModal, questions.length]);
+  }, [
+    currentIndex,
+    loading,
+    isCompleted,
+    isAnswerChecked,
+    currentQuestion?.id,
+    showExitModal,
+    questions.length,
+  ]);
 
   const handleSpeakQuestion = () => {
     if (currentQuestion?.questionText) {
@@ -263,7 +318,27 @@ export default function LessonScreen() {
         }).start();
 
         // Gửi kết quả về Backend Database để lưu trữ & mở khóa bài kế tiếp
-        const targetProfileId = activeProfile?.id || "00000000-0000-4000-8000-000000000101";
+        let targetProfileId = activeProfile?.id;
+        if (!targetProfileId) {
+          try {
+            const storedProfile = await storage.getItem("emath_active_profile");
+            if (storedProfile) {
+              const parsed = JSON.parse(storedProfile);
+              targetProfileId = parsed?.id;
+            }
+          } catch (e) {}
+        }
+        if (!targetProfileId) {
+          targetProfileId = "00000000-0000-4000-8000-000000000101";
+        }
+
+        let targetToken = authToken;
+        if (!targetToken) {
+          try {
+            targetToken = await storage.getItem("emath_auth_token");
+          } catch (e) {}
+        }
+
         if (id && targetProfileId) {
           try {
             await emathApi.submitLesson(
@@ -271,7 +346,7 @@ export default function LessonScreen() {
               targetProfileId,
               correctAnswersCount,
               questions.length,
-              authToken || undefined
+              targetToken || undefined,
             );
           } catch (e) {
             console.warn("Lỗi lưu kết quả bài thi vào DB:", e);
@@ -282,14 +357,90 @@ export default function LessonScreen() {
   };
 
   const totalQuestions = questions.length;
-  const accuracyRate = totalQuestions > 0 ? Math.round((correctAnswersCount / totalQuestions) * 100) : 0;
-  const starsEarned = accuracyRate >= 80 ? 3 : accuracyRate >= 50 ? 2 : accuracyRate >= 20 ? 1 : 0;
+  const accuracyRate =
+    totalQuestions > 0
+      ? Math.round((correctAnswersCount / totalQuestions) * 100)
+      : 0;
+  const starsEarned =
+    accuracyRate >= 80
+      ? 3
+      : accuracyRate >= 50
+        ? 2
+        : accuracyRate >= 20
+          ? 1
+          : 0;
+
+  // Màn hình thông báo bài học bị khóa (tự động chuyển hướng về Hành trình)
+  // Màn hình thông báo không có quyền truy cập / Bài học bị khóa
+  if (isLockedLesson) {
+    return (
+      <SafeAreaView
+        style={[styles.container, styles.lockedScreenWrapper]}
+        edges={["top", "left", "right"]}
+      >
+        <View style={styles.lockedCard}>
+          <View style={styles.lockedIconRing}>
+            <Text style={styles.lockedEmoji}>🔒</Text>
+          </View>
+
+          <View style={styles.lockedBadgePill}>
+            <Text style={styles.lockedBadgePillText}>LỘ TRÌNH CHƯA MỞ KHÓA</Text>
+          </View>
+
+          <Text style={styles.lockedTitle}>Chưa thể truy cập bài này!</Text>
+
+          <Text style={styles.lockedDesc}>
+            {lockMessage ||
+              "Bé cần hoàn thành bài học trước đó trong lộ trình để mở khóa bài học này nhé! Hoặc phụ huynh có thể chuyển sang hồ sơ bé khác."}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.lockedReplayAudioBtn}
+            activeOpacity={0.8}
+            onPress={() =>
+              speak(
+                lockMessage ||
+                  "Bài học này đang bị khóa. Bé hãy hoàn thành bài học trước để mở khóa nhé!",
+                { pitch: 1.2, rate: 0.95 }
+              )
+            }
+          >
+            <Ionicons name="volume-high" size={18} color="#00658D" />
+            <Text style={styles.lockedReplayAudioText}>Nghe lại hướng dẫn</Text>
+          </TouchableOpacity>
+
+          <View style={styles.lockedActionGroup}>
+            <TouchableOpacity
+              style={styles.lockedBackBtn}
+              activeOpacity={0.88}
+              onPress={() => router.replace("/(tabs)/journey")}
+            >
+              <Text style={styles.lockedBackBtnText}>QUAY VỀ HÀNH TRÌNH 🗺️</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.lockedSecondaryBtn}
+              activeOpacity={0.85}
+              onPress={() => router.replace("/profiles")}
+            >
+              <Text style={styles.lockedSecondaryBtnText}>ĐỔI HỒ SƠ KHÁC 👨‍👩‍👧‍👦</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading || !currentQuestion || questions.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, styles.loadingWrapper]} edges={["top", "left", "right"]}>
+      <SafeAreaView
+        style={[styles.container, styles.loadingWrapper]}
+        edges={["top", "left", "right"]}
+      >
         <ActivityIndicator size="large" color="#FF7A00" />
-        <Text style={styles.loadingText}>Bé đợi chút nhé, bài học đang tải... 🌟</Text>
+        <Text style={styles.loadingText}>
+          Bé đợi chút nhé, bài học đang tải... 🌟
+        </Text>
       </SafeAreaView>
     );
   }
@@ -380,11 +531,13 @@ export default function LessonScreen() {
                 {/* Left Group */}
                 <View style={styles.equationGroup}>
                   <View style={styles.equationItemsRow}>
-                    {currentQuestion.visualFormula?.leftItems.map((emoji, idx) => (
-                      <Text key={idx} style={styles.equationEmoji}>
-                        {emoji}
-                      </Text>
-                    ))}
+                    {currentQuestion.visualFormula?.leftItems.map(
+                      (emoji, idx) => (
+                        <Text key={idx} style={styles.equationEmoji}>
+                          {emoji}
+                        </Text>
+                      ),
+                    )}
                   </View>
                   <View style={styles.equationNumberPill}>
                     <Text style={styles.equationNumberText}>
@@ -403,11 +556,13 @@ export default function LessonScreen() {
                 {/* Right Group */}
                 <View style={styles.equationGroup}>
                   <View style={styles.equationItemsRow}>
-                    {currentQuestion.visualFormula?.rightItems.map((emoji, idx) => (
-                      <Text key={idx} style={styles.equationEmoji}>
-                        {emoji}
-                      </Text>
-                    ))}
+                    {currentQuestion.visualFormula?.rightItems.map(
+                      (emoji, idx) => (
+                        <Text key={idx} style={styles.equationEmoji}>
+                          {emoji}
+                        </Text>
+                      ),
+                    )}
                   </View>
                   <View style={styles.equationNumberPill}>
                     <Text style={styles.equationNumberText}>
@@ -466,7 +621,7 @@ export default function LessonScreen() {
 
             {/* OPTIONS GRID (TACTILE 3D BUTTONS) */}
             <View style={styles.optionsContainer}>
-              {currentQuestion.options.map((opt) => {
+              {currentQuestion.options.map((opt, idx) => {
                 const isSelected = selectedOptionId === opt.id;
                 let optionStyle = styles.optionBtnDefault;
                 let optionTextStyle = styles.optionTextDefault;
@@ -488,7 +643,7 @@ export default function LessonScreen() {
 
                 return (
                   <TouchableOpacity
-                    key={opt.id}
+                    key={`${opt.id}-${idx}`}
                     style={[styles.optionBtnBase, optionStyle]}
                     onPress={() => handleSelectOption(opt.id)}
                     activeOpacity={0.8}
@@ -566,7 +721,9 @@ export default function LessonScreen() {
                           : styles.feedbackTitleWrong,
                       ]}
                     >
-                      {isCorrect ? "Chính xác! Tuyệt vời 🎉" : "Chưa đúng rồi 🥺"}
+                      {isCorrect
+                        ? "Chính xác! Tuyệt vời 🎉"
+                        : "Chưa đúng rồi 🥺"}
                     </Text>
                     <Text style={styles.feedbackSub}>
                       {isCorrect
@@ -604,7 +761,13 @@ export default function LessonScreen() {
             {/* Big Trophy / Mascot */}
             <View style={styles.victoryMascotCircle}>
               <Text style={styles.victoryTrophyEmoji}>
-                {accuracyRate >= 80 ? "🏆" : accuracyRate >= 50 ? "⭐" : accuracyRate > 0 ? "🌱" : "🥺"}
+                {accuracyRate >= 80
+                  ? "🏆"
+                  : accuracyRate >= 50
+                    ? "⭐"
+                    : accuracyRate > 0
+                      ? "🌱"
+                      : "🥺"}
               </Text>
             </View>
 
@@ -612,19 +775,19 @@ export default function LessonScreen() {
               {accuracyRate >= 80
                 ? "BÀI HỌC HOÀN TẤT!"
                 : accuracyRate >= 50
-                ? "HOÀN THÀNH TỐT!"
-                : accuracyRate > 0
-                ? "CỐ GẮNG LẦN SAU!"
-                : "CHƯA ĐẠT RỒI!"}
+                  ? "HOÀN THÀNH TỐT!"
+                  : accuracyRate > 0
+                    ? "CỐ GẮNG LẦN SAU!"
+                    : "CHƯA ĐẠT RỒI!"}
             </Text>
             <Text style={styles.victorySub}>
               {accuracyRate >= 80
                 ? "Bé đã làm rất xuất sắc và ghi nhớ bài cực nhanh! 🎉"
                 : accuracyRate >= 50
-                ? `Bé đã trả lời đúng ${correctAnswersCount}/${totalQuestions} câu, cùng luyện thêm để đạt 3 sao nhé! 🌟`
-                : accuracyRate > 0
-                ? `Bé đã trả lời đúng ${correctAnswersCount}/${totalQuestions} câu, hãy thử lại để đạt kết quả cao hơn nhé! 💪`
-                : `Bé chưa trả lời đúng câu nào (0/${totalQuestions}). Hãy ấn nút bên dưới và làm lại nhé! 🚀`}
+                  ? `Bé đã trả lời đúng ${correctAnswersCount}/${totalQuestions} câu, cùng luyện thêm để đạt 3 sao nhé! 🌟`
+                  : accuracyRate > 0
+                    ? `Bé đã trả lời đúng ${correctAnswersCount}/${totalQuestions} câu, hãy thử lại để đạt kết quả cao hơn nhé! 💪`
+                    : `Bé chưa trả lời đúng câu nào (0/${totalQuestions}). Hãy ấn nút bên dưới và làm lại nhé! 🚀`}
             </Text>
 
             {/* Stat Badges */}
@@ -632,7 +795,9 @@ export default function LessonScreen() {
               {/* XP */}
               <View style={styles.victoryStatCard}>
                 <Text style={styles.victoryStatEmoji}>⚡</Text>
-                <Text style={styles.victoryStatNumber}>+{earnedXp + (accuracyRate >= 50 ? 10 : 5)}</Text>
+                <Text style={styles.victoryStatNumber}>
+                  +{earnedXp + (accuracyRate >= 50 ? 10 : 5)}
+                </Text>
                 <Text style={styles.victoryStatLabel}>Tổng XP</Text>
               </View>
 
@@ -682,7 +847,8 @@ export default function LessonScreen() {
             <Text style={styles.exitModalEmoji}>🥺</Text>
             <Text style={styles.exitModalTitle}>Bé có muốn dừng lại?</Text>
             <Text style={styles.exitModalDesc}>
-              Bé sắp hoàn thành bài học rồi đó, ở lại để nhận ngôi sao lấp lánh nhé!
+              Bé sắp hoàn thành bài học rồi đó, ở lại để nhận ngôi sao lấp lánh
+              nhé!
             </Text>
 
             <View style={styles.exitModalActions}>
@@ -1317,5 +1483,132 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontSize: 14,
     fontWeight: "700",
+  },
+
+  // LOCKED / ACCESS DENIED SCREEN
+  lockedScreenWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "#FDF7FF",
+  },
+  lockedCard: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: "#FFFDF9",
+    borderBottomWidth: 6,
+    borderBottomColor: "#E5DEC9",
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#5C5470",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  lockedIconRing: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F3EAFF",
+    borderWidth: 2,
+    borderColor: "#EEE4FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  lockedEmoji: {
+    fontSize: 40,
+  },
+  lockedBadgePill: {
+    backgroundColor: "#FFDAD8",
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  lockedBadgePillText: {
+    color: "#AE2F34",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  lockedTitle: {
+    color: "#1E1830",
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  lockedDesc: {
+    color: "#3F484F",
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: "center",
+    fontWeight: "500",
+    marginBottom: 16,
+  },
+  lockedReplayAudioBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    borderRadius: 9999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 6,
+    marginBottom: 22,
+  },
+  lockedReplayAudioText: {
+    color: "#00658D",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  lockedActionGroup: {
+    width: "100%",
+    gap: 12,
+  },
+  lockedBackBtn: {
+    width: "100%",
+    backgroundColor: "#FF7372",
+    borderRadius: 9999,
+    borderWidth: 3,
+    borderColor: "rgba(255, 255, 255, 0.7)",
+    borderBottomWidth: 5,
+    borderBottomColor: "#D84544",
+    paddingVertical: 14,
+    alignItems: "center",
+    shadowColor: "#FF7372",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  lockedBackBtnText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  lockedSecondaryBtn: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderBottomWidth: 4,
+    borderBottomColor: "#CBD5E1",
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  lockedSecondaryBtnText: {
+    color: "#475569",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
 });

@@ -261,12 +261,12 @@ function formatDuration(seconds: number): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF9EA",
+    backgroundColor: "#F4F7FB",
   },
   content: {
     paddingHorizontal: 20,
     paddingTop: 18,
-    paddingBottom: 30,
+    paddingBottom: 90,
   },
   header: {
     flexDirection: "row",
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 16,
-    backgroundColor: "#FFE7A0",
+    backgroundColor: "#FFF3C9",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 11,

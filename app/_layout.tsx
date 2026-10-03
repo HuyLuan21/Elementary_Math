@@ -24,11 +24,11 @@ function AppNavigator() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#141414" },
+          contentStyle: { backgroundColor: "#F4F7FB" },
           animation: "fade",
         }}
       >

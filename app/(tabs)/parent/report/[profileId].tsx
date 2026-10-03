@@ -458,12 +458,12 @@ function formatDuration(seconds: number): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF9EA",
+    backgroundColor: "#F4F7FB",
   },
   content: {
     paddingHorizontal: 18,
     paddingTop: 14,
-    paddingBottom: 28,
+    paddingBottom: 90,
   },
   header: {
     flexDirection: "row",

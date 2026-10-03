@@ -16,6 +16,7 @@ import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-ico
 import { BrandHeader } from "../../src/components/BrandHeader";
 import { useAuth } from "../../src/context/AuthContext";
 import { emathApi, JourneyChapter, JourneyLevel } from "../../src/services/emathApi";
+import { storage } from "../../src/utils/storage";
 
 const { width } = Dimensions.get("window");
 
@@ -191,7 +192,26 @@ export default function JourneyRoute() {
     try {
       setLoading(true);
       hasAutoScrolled.current = false;
-      const data = await emathApi.getJourney(activeProfile?.id, authToken || undefined);
+
+      let currentProfileId = activeProfile?.id;
+      if (!currentProfileId) {
+        try {
+          const storedProfile = await storage.getItem("emath_active_profile");
+          if (storedProfile) {
+            const parsed = JSON.parse(storedProfile);
+            currentProfileId = parsed?.id;
+          }
+        } catch (e) {}
+      }
+
+      let currentToken = authToken;
+      if (!currentToken) {
+        try {
+          currentToken = await storage.getItem("emath_auth_token");
+        } catch (e) {}
+      }
+
+      const data = await emathApi.getJourney(currentProfileId || undefined, currentToken || undefined);
       if (data && data.length > 0) {
         setChapters(data);
       } else {
@@ -298,14 +318,14 @@ export default function JourneyRoute() {
             }}
           >
             {/* Chapter Banner */}
-            <View style={[styles.chapterBanner, { borderColor: chap.color }]}>
+            <View style={[styles.chapterBanner, { borderLeftColor: chap.color || "#35A9E0" }]}>
               <View style={styles.chapterInfo}>
-                <Text style={styles.chapterTag}>HỌC PHẦN {chap.id}</Text>
+                <Text style={styles.chapterTag}>HỌC PHẦN {chap.orderIndex || chap.id}</Text>
                 <Text style={styles.chapterTitle}>{chap.title}</Text>
                 <Text style={styles.chapterDesc}>{chap.desc}</Text>
               </View>
               <TouchableOpacity
-                style={[styles.guideBookBtn, { backgroundColor: chap.color }]}
+                style={[styles.guideBookBtn, { backgroundColor: chap.color || "#35A9E0" }]}
                 activeOpacity={0.8}
               >
                 <Ionicons name="book" size={18} color="#FFF" />
@@ -329,21 +349,21 @@ export default function JourneyRoute() {
                 const isLocked = item.status === "locked";
 
                 // Màu sắc theo loại node & trạng thái
-                let nodeColor = "#10B981"; // completed: Xanh ngọc
-                let nodeBottomColor = "#047857";
+                let nodeColor = "#10B981"; // completed: Xanh lá tươi
+                let nodeBottomColor = "#059669";
 
                 if (isActive) {
-                  nodeColor = "#E50914"; // active: Đỏ nổi bật
-                  nodeBottomColor = "#991B1B";
+                  nodeColor = "#35A9E0"; // active: Xanh dương sáng chủ đạo
+                  nodeBottomColor = "#168FC5";
                 } else if (isLocked) {
-                  nodeColor = "#262626"; // locked: Xám
-                  nodeBottomColor = "#141414";
+                  nodeColor = "#E2E8F0"; // locked: Xám sáng nhẹ
+                  nodeBottomColor = "#CBD5E1";
                 } else if (item.type === "chest") {
-                  nodeColor = "#F59E0B"; // chest vàng
-                  nodeBottomColor = "#B45309";
+                  nodeColor = "#FFC837"; // chest vàng tươi
+                  nodeBottomColor = "#E5A900";
                 } else if (item.type === "trophy") {
-                  nodeColor = "#8B5CF6"; // trophy tím
-                  nodeBottomColor = "#6D28D9";
+                  nodeColor = "#A855F7"; // trophy tím tươi
+                  nodeBottomColor = "#9333EA";
                 }
 
                 return (
@@ -406,18 +426,18 @@ export default function JourneyRoute() {
 
                       {/* Icon inside Node */}
                       {isLocked ? (
-                        <Ionicons name="lock-closed" size={24} color="#737373" />
+                        <Ionicons name="lock-closed" size={24} color="#94A3B8" />
                       ) : item.type === "chest" ? (
                         <MaterialCommunityIcons
                           name="treasure-chest"
                           size={32}
-                          color={isCompleted ? "#FEF08A" : "#FFF"}
+                          color={isCompleted ? "#FFF" : "#FFF"}
                         />
                       ) : item.type === "trophy" ? (
                         <FontAwesome5
                           name="trophy"
                           size={28}
-                          color={isCompleted ? "#FCD34D" : "#FFF"}
+                          color={isCompleted ? "#FFF" : "#FFF"}
                         />
                       ) : item.type === "fast_quiz" ? (
                         <FontAwesome5 name="bolt" size={26} color="#FFF" />
@@ -443,7 +463,7 @@ export default function JourneyRoute() {
                             key={s}
                             name="star"
                             size={12}
-                            color={s <= item.stars ? "#FBBF24" : "#525252"}
+                            color={s <= item.stars ? "#F59E0B" : "#CBD5E1"}
                             style={{ marginHorizontal: 1 }}
                           />
                         ))}
@@ -464,7 +484,7 @@ export default function JourneyRoute() {
                                   transform: [{ translateX: dotX }],
                                   backgroundColor: isCompleted
                                     ? "#10B981"
-                                    : "#333333",
+                                    : "#DDE5EC",
                                 },
                               ]}
                             />
@@ -555,14 +575,14 @@ export default function JourneyRoute() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: "#F4F7FB",
   },
   topHeader: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#181818",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#262626",
+    borderBottomColor: "#E6EDF2",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -575,23 +595,25 @@ const styles = StyleSheet.create({
   statBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#262626",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: "#FFF3C9",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
-    gap: 4,
+    borderWidth: 1,
+    borderColor: "#FFE399",
+    gap: 5,
   },
   statIcon: {
     fontSize: 14,
   },
   statText: {
-    color: "#F59E0B",
+    color: "#574300",
     fontSize: 13,
     fontWeight: "800",
   },
   scrollContent: {
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 90,
     alignItems: "center",
   },
   chapterSection: {
@@ -601,38 +623,40 @@ const styles = StyleSheet.create({
   },
   chapterBanner: {
     width: width - 32,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderLeftWidth: 5,
+    borderWidth: 1,
+    borderColor: "#DDE5EC",
     marginBottom: 28,
     shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   chapterInfo: {
     flex: 1,
     marginRight: 10,
   },
   chapterTag: {
-    color: "#9CA3AF",
+    color: "#168FC5",
     fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginBottom: 2,
   },
   chapterTitle: {
-    color: "#FFFFFF",
+    color: "#111827",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "800",
     marginBottom: 4,
   },
   chapterDesc: {
-    color: "#A3A3A3",
+    color: "#6B7280",
     fontSize: 12,
   },
   guideBookBtn: {
@@ -640,7 +664,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 10,
     gap: 6,
   },
   guideBookText: {
@@ -664,12 +688,12 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
-    borderBottomWidth: 6, // Hiệu ứng 3D đáy nút của Duolingo
+    borderBottomWidth: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 4,
     zIndex: 2,
   },
   chestNodeShape: {
@@ -692,7 +716,7 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 45,
     borderWidth: 2,
-    borderColor: "rgba(229, 9, 20, 0.5)",
+    borderColor: "rgba(53, 169, 224, 0.5)",
     borderStyle: "dashed",
   },
 
@@ -700,7 +724,7 @@ const styles = StyleSheet.create({
   activeTooltip: {
     position: "absolute",
     top: -38,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#35A9E0",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -709,12 +733,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 3,
-    elevation: 6,
+    elevation: 4,
   },
   activeTooltipText: {
-    color: "#E50914",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -729,19 +753,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 6,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#FFFFFF",
+    borderTopColor: "#35A9E0",
   },
 
   // STARS BELOW COMPLETED NODE
   starsBadge: {
     flexDirection: "row",
     marginTop: 6,
-    backgroundColor: "#1F1F1F",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: "#DDE5EC",
   },
 
   // CONNECTING STEPPING STONES
@@ -754,24 +778,25 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
+    backgroundColor: "#DDE5EC",
     borderBottomWidth: 2,
-    borderBottomColor: "#171717",
+    borderBottomColor: "#CBD9E1",
   },
 
   // MODAL STYLING
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.75)",
+    backgroundColor: "rgba(17, 24, 39, 0.5)",
     justifyContent: "flex-end",
   },
   modalCard: {
-    backgroundColor: "#1F1F1F",
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
     paddingBottom: 36,
     borderWidth: 1,
-    borderColor: "#333333",
+    borderColor: "#DDE5EC",
   },
   modalTop: {
     flexDirection: "row",
@@ -780,36 +805,38 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalCategoryBadge: {
-    backgroundColor: "#312E81",
+    backgroundColor: "#DFF3FC",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   modalCategoryText: {
-    color: "#818CF8",
+    color: "#168FC5",
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
   closeBtn: {
     padding: 4,
   },
   modalTitle: {
-    color: "#FFFFFF",
+    color: "#111827",
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: "800",
     marginBottom: 8,
   },
   modalDesc: {
-    color: "#9CA3AF",
+    color: "#6B7280",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
   },
   rewardCard: {
     flexDirection: "row",
-    backgroundColor: "#262626",
+    backgroundColor: "#F4F7FB",
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#DDE5EC",
     padding: 16,
     marginBottom: 24,
     justifyContent: "space-around",
@@ -823,25 +850,25 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   rewardValue: {
-    color: "#FFFFFF",
+    color: "#111827",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
   rewardLabel: {
-    color: "#737373",
+    color: "#6B7280",
     fontSize: 12,
   },
   rewardDivider: {
     width: 1,
     height: 36,
-    backgroundColor: "#404040",
+    backgroundColor: "#DDE5EC",
   },
   startButton: {
-    backgroundColor: "#E50914",
+    backgroundColor: "#35A9E0",
     borderBottomWidth: 5,
-    borderBottomColor: "#991B1B",
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderBottomColor: "#168FC5",
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -849,6 +876,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
 });

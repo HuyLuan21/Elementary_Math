@@ -107,24 +107,30 @@ export interface KidCornerData {
 
 export const emathApi = {
   // Lấy bản đồ hành trình học tập từ DB
-  getJourney: async (profileId?: string, token?: string): Promise<JourneyChapter[]> => {
+  getJourney: async (
+    profileId?: string,
+    token?: string,
+  ): Promise<JourneyChapter[]> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-    const response = await apiClient.get<{ data: JourneyChapter[] }>("/emath/journey", {
-      params: { profile_id: profileId },
-      headers,
-    });
+    const response = await apiClient.get<{ data: JourneyChapter[] }>(
+      "/emath/journey",
+      {
+        params: { profile_id: profileId },
+        headers,
+      },
+    );
     return response.data?.data || [];
   },
 
   // Lấy chi tiết bài học và danh sách câu hỏi từ DB
   getLessonQuestions: async (
     lessonId: string,
-    token?: string
+    token?: string,
   ): Promise<LessonDetailData> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await apiClient.get<{ data: LessonDetailData }>(
       `/emath/lessons/${lessonId}/questions`,
-      { headers }
+      { headers },
     );
     return response.data?.data;
   },
@@ -135,7 +141,7 @@ export const emathApi = {
     profileId: string,
     correctCount: number,
     totalQuestions: number,
-    token?: string
+    token?: string,
   ): Promise<SubmitLessonResult> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await apiClient.post<{ data: SubmitLessonResult }>(
@@ -145,18 +151,24 @@ export const emathApi = {
         correct_count: correctCount,
         total_questions: totalQuestions,
       },
-      { headers }
+      { headers },
     );
     return response.data?.data;
   },
 
   // Lấy dữ liệu Góc của bé từ DB
-  getKidCorner: async (profileId: string, token?: string): Promise<KidCornerData> => {
+  getKidCorner: async (
+    profileId: string,
+    token?: string,
+  ): Promise<KidCornerData> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-    const response = await apiClient.get<{ data: KidCornerData }>("/emath/kid-corner", {
-      params: { profile_id: profileId },
-      headers,
-    });
+    const response = await apiClient.get<{ data: KidCornerData }>(
+      "/emath/kid-corner",
+      {
+        params: { profile_id: profileId },
+        headers,
+      },
+    );
     return response.data?.data;
   },
 };

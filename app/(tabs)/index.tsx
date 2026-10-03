@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -9,9 +10,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Speech from "expo-speech";
+import {
+  Award,
+  Check,
+  ChevronRight,
+  Flame,
+  Heart,
+  Lock,
+  Play,
+  Settings,
+  Sparkles,
+  Star,
+  Trophy,
+  Volume2,
+} from "lucide-react-native";
+
 import { useAuth } from "../../src/context/AuthContext";
 import { achievementApi } from "../../src/services/achievementApi";
 import {
@@ -20,39 +36,172 @@ import {
   StickerAchievement,
 } from "../../src/types/achievement";
 import { ParentPinModal } from "../../src/components/ParentPinModal";
-import { BrandHeader } from "../../src/components/BrandHeader";
-import * as Speech from "expo-speech";
 
-type LoadState = {
-  profileId: string | null;
-  status: "loading" | "success" | "error";
-  data: ProfileAchievements | null;
-};
+const { width } = Dimensions.get("window");
+
+const DEFAULT_BADGES = [
+  {
+    id: "badge-1",
+    code: "COUNT_KING",
+    name: "Vua Đếm Số",
+    description: "Đếm đúng 50 bài toán",
+    tag: "⭐ Cực đỉnh",
+    status: "earned" as const,
+    emoji: "👑",
+    color: "#FFDF9B",
+  },
+  {
+    id: "badge-2",
+    code: "EXPLORER",
+    name: "Nhà Thám Hiểm",
+    description: "Vượt qua Chặng 1",
+    tag: "🏆 Tuyệt vời",
+    status: "earned" as const,
+    emoji: "🧭",
+    color: "#C6E7FF",
+  },
+  {
+    id: "badge-3",
+    code: "HARD_WORKING",
+    name: "Bé Chăm Chỉ",
+    description: "Học 5 ngày liên tiếp",
+    tag: "🔥 Xuất sắc",
+    status: "earned" as const,
+    emoji: "🐝",
+    color: "#FFDF9B",
+  },
+  {
+    id: "badge-4",
+    code: "OWL_GENIUS",
+    name: "Cú Vọ Tinh Anh",
+    description: "Giải đúng 3 bài đố vui",
+    tag: "Tiến độ 2/3",
+    status: "in_progress" as const,
+    progress: 0.66,
+    emoji: "🦉",
+    color: "#EEE4FF",
+  },
+  {
+    id: "badge-5",
+    code: "GEOMETRY_MASTER",
+    name: "Nhà Hình Học",
+    description: "Mở khóa ở Chặng 2",
+    tag: "Chặng 2",
+    status: "locked" as const,
+    emoji: "📐",
+    color: "#E9DDFF",
+  },
+  {
+    id: "badge-6",
+    code: "COMPARE_CHAMP",
+    name: "Vua So Sánh",
+    description: "Mở khóa ở Chặng 3",
+    tag: "Chặng 3",
+    status: "locked" as const,
+    emoji: "⚖️",
+    color: "#E9DDFF",
+  },
+];
+
+const DEFAULT_STICKERS = [
+  {
+    id: "st-1",
+    name: "Thỏ Trắng",
+    emoji: "🐰",
+    tag: "Tai dài",
+    bg: "#FDF2F8",
+    color: "#AE2F34",
+    soundText: "Thỏ trắng nhảy nhót tung tăng!",
+  },
+  {
+    id: "st-2",
+    name: "Cáo Nhỏ",
+    emoji: "🦊",
+    tag: "Nhanh nhẹn",
+    bg: "#FFF7ED",
+    color: "#785A00",
+    soundText: "Cáo nhỏ thông minh và đáng yêu!",
+  },
+  {
+    id: "st-3",
+    name: "Gà Con",
+    emoji: "🐥",
+    tag: "Chíp chíp",
+    bg: "#FEFCE8",
+    color: "#765900",
+    soundText: "Gà con chíp chíp chào buổi sáng!",
+  },
+  {
+    id: "st-4",
+    name: "Cún Vàng",
+    emoji: "🐶",
+    tag: "Gâu gâu",
+    bg: "#FFFBEB",
+    color: "#00658D",
+    soundText: "Cún vàng vẫy đuôi chúc mừng bé!",
+  },
+  {
+    id: "st-5",
+    name: "Chuột Tí Hon",
+    emoji: "🐭",
+    tag: "Chít chít",
+    bg: "#FAF5FF",
+    color: "#6F7880",
+    soundText: "Chuột tí hon lanh lợi xin chào!",
+  },
+];
 
 export default function AchievementsRoute() {
   const router = useRouter();
   const { activeProfile, signOut } = useAuth();
-  const [pinModalVisible, setPinModalVisible] = React.useState(false);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
+  const [achievements, setAchievements] = useState<ProfileAchievements | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const profile = activeProfile || {
     id: "kid-1",
-    name: "Bé Nam",
+    name: "Bé Na",
     role: "child" as const,
     grade: "Lớp 1",
-    avatarColor: "#E11D48",
+    avatarColor: "#FFDF9B",
     avatarIcon: "🦁",
+    totalStars: 14,
   };
 
   const isParent = profile.role === "parent";
 
-  const speakGreeting = () => {
-    const message = isParent
-      ? `Xin chào Phụ huynh ${profile.name}. Báo cáo học tập của bé đã sẵn sàng.`
-      : `Chào mừng ${profile.name}! Hôm nay chúng ta cùng học toán thật vui nhé!`;
+  useEffect(() => {
+    if (!profile.id) return;
+    let isCurrent = true;
+    setLoading(true);
+
+    achievementApi
+      .getProfileAchievements(profile.id)
+      .then((data) => {
+        if (isCurrent) setAchievements(data);
+      })
+      .catch(() => {
+        // Fallback default rich achievements
+      })
+      .finally(() => {
+        if (isCurrent) setLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [profile.id]);
+
+  const speakGreeting = (customMessage?: string) => {
+    const message =
+      customMessage ||
+      (isParent
+        ? `Xin chào Phụ huynh ${profile.name}. Báo cáo học tập của bé đã sẵn sàng.`
+        : `${profile.name} ơi! Cùng ngắm những huy hiệu lấp lánh bé đã thu thập được nhé!`);
 
     Speech.speak(message, {
       language: "vi-VN",
-      pitch: isParent ? 1.0 : 1.2,
+      pitch: isParent ? 1.0 : 1.25,
       rate: 0.9,
     });
   };
@@ -65,221 +214,358 @@ export default function AchievementsRoute() {
     }
   };
 
-  const handleSignOut = () => {
-    signOut();
-    router.replace("/");
-  };
+  const totalStars = profile.totalStars || 14;
+  const earnedBadgesCount = achievements?.summary.badge_count || 3;
+  const stickersCount = achievements?.summary.sticker_count || DEFAULT_STICKERS.length;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.navBar}>
-        <BrandHeader />
-
-        <TouchableOpacity
-          style={styles.profileBadge}
-          onPress={handleSwitchProfile}
-        >
-          <View
-            style={[
-              styles.miniAvatar,
-              { backgroundColor: profile.avatarColor },
-            ]}
-          >
-            <Text style={styles.miniAvatarEmoji}>{profile.avatarIcon}</Text>
-          </View>
-          <Text style={styles.profileBadgeName}>{profile.name}</Text>
-          <Text style={styles.switchText}>Đổi ▼</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View
-          style={[
-            styles.banner,
-            isParent ? styles.parentBannerBg : styles.kidBannerBg,
-          ]}
-        >
-          <View style={styles.bannerInfo}>
-            <Text style={styles.welcomeTag}>
-              {isParent
-                ? "🛡️ CHẾ ĐỘ PHỤ HUYNH"
-                : `⭐ ${profile.grade || "HỌC SINH"}`}
-            </Text>
-            <Text style={styles.bannerTitle}>
-              {isParent
-                ? `Xin chào, ${profile.name}`
-                : `Hôm nay học gì thế, ${profile.name}?`}
-            </Text>
-            <Text style={styles.bannerSubtitle}>
-              {isParent
-                ? "Theo dõi tiến độ, thời gian làm bài & kết quả học toán của các bé."
-                : "Khám phá các bài toán vui nhộn và thử thách chinh phục điểm 10!"}
-            </Text>
-
-            <TouchableOpacity style={styles.speakBtn} onPress={speakGreeting}>
-              <Text style={styles.speakBtnText}>🔊 Nghe lời chào</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.bannerAvatarBig}>
-            <Text style={styles.bigAvatarEmoji}>{profile.avatarIcon}</Text>
-          </View>
-        </View>
-
-        {!isParent ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📚 Bài học toán dành cho bé</Text>
-
-            <View style={styles.cardsGrid}>
-              <TouchableOpacity
-                style={[styles.lessonCard, { backgroundColor: "#1E293B" }]}
-                onPress={() => router.push("/(tabs)/journey")}
-              >
-                <Text style={styles.cardEmoji}>➕➖</Text>
-                <Text style={styles.cardTitle}>Phép Cộng & Trừ</Text>
-                <Text style={styles.cardDesc}>
-                  10 bài tập vui nhộn với hình ảnh
-                </Text>
-                <View style={styles.startBadge}>
-                  <Text style={styles.startBadgeText}>Bắt đầu ngay ▶</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.lessonCard, { backgroundColor: "#311B92" }]}
-                onPress={() => router.push("/(tabs)/journey")}
-              >
-                <Text style={styles.cardEmoji}>📐🔺</Text>
-                <Text style={styles.cardTitle}>Nhận Biết Hình Học</Text>
-                <Text style={styles.cardDesc}>
-                  Hình vuông, hình tròn, tam giác
-                </Text>
-                <View style={styles.startBadge}>
-                  <Text style={styles.startBadgeText}>Khám phá ▶</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.lessonCard, { backgroundColor: "#004D40" }]}
-                onPress={() => router.push("/(tabs)/journey")}
-              >
-                <Text style={styles.cardEmoji}>🧩🧠</Text>
-                <Text style={styles.cardTitle}>Đố Vui Logic</Text>
-                <Text style={styles.cardDesc}>Thử thách phát triển tư duy</Text>
-                <View style={styles.startBadge}>
-                  <Text style={styles.startBadgeText}>Chơi ngay ▶</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.lessonCard, { backgroundColor: "#4A148C" }]}
-                onPress={() => router.push("/(tabs)/journey")}
-              >
-                <Text style={styles.cardEmoji}>🏆⏱️</Text>
-                <Text style={styles.cardTitle}>Thi Đấu Tính Nhanh</Text>
-                <Text style={styles.cardDesc}>
-                  Thử thách 60 giây đạt điểm cao
-                </Text>
-                <View style={styles.startBadge}>
-                  <Text style={styles.startBadgeText}>Vào thi ▶</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              📊 Báo cáo học tập & Quản lý
-            </Text>
-
-            <View style={styles.parentStatsRow}>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>45 phút</Text>
-                <Text style={styles.statLabel}>Thời gian học hôm nay</Text>
-              </View>
-
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>18/20</Text>
-                <Text style={styles.statLabel}>Bài tập hoàn thành</Text>
-              </View>
-
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>9.2/10</Text>
-                <Text style={styles.statLabel}>Điểm số trung bình</Text>
-              </View>
-            </View>
-
-            <View style={styles.parentActionList}>
-              <TouchableOpacity
-                style={styles.parentActionItem}
-                onPress={() => router.push("/(tabs)/parent")}
-              >
-                <Text style={styles.parentActionIcon}>⏰</Text>
-                <View style={styles.parentActionContent}>
-                  <Text style={styles.parentActionTitle}>
-                    Giới hạn thời gian học
-                  </Text>
-                  <Text style={styles.parentActionSub}>
-                    Đã đặt: Max 60 phút/ngày
-                  </Text>
-                </View>
-                <Text style={styles.arrowText}>›</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.parentActionItem}
-                onPress={() => router.push("/(tabs)/parent")}
-              >
-                <Text style={styles.parentActionIcon}>🔑</Text>
-                <View style={styles.parentActionContent}>
-                  <Text style={styles.parentActionTitle}>
-                    Cài đặt mã PIN Phụ huynh
-                  </Text>
-                  <Text style={styles.parentActionSub}>
-                    Mã PIN hiện tại: 1234
-                  </Text>
-                </View>
-                <Text style={styles.arrowText}>›</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.parentActionItem}
-                onPress={handleSwitchProfile}
-              >
-                <Text style={styles.parentActionIcon}>👶</Text>
-                <View style={styles.parentActionContent}>
-                  <Text style={styles.parentActionTitle}>
-                    Quản lý danh sách Hồ sơ Bé
-                  </Text>
-                  <Text style={styles.parentActionSub}>
-                    3 bé học viên đang hoạt động
-                  </Text>
-                </View>
-                <Text style={styles.arrowText}>›</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.footerRow}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
+      {/* 1. TOP APP BAR HEADER */}
+      <View style={styles.topAppBar}>
+        <View style={styles.headerInner}>
+          {/* Left: Profile Badge */}
           <TouchableOpacity
-            style={styles.switchProfileBtn}
+            style={styles.profileContainer}
+            activeOpacity={0.85}
             onPress={handleSwitchProfile}
           >
-            <Text style={styles.switchProfileBtnText}>🔁 Chọn hồ sơ khác</Text>
+            <View
+              style={[
+                styles.avatarRing,
+                { backgroundColor: profile.avatarColor || "#FFDF9B" },
+              ]}
+            >
+              <Text style={styles.avatarEmoji}>{profile.avatarIcon || "🦁"}</Text>
+              <View style={styles.avatarMiniBadge}>
+                <Sparkles size={10} color="#765900" />
+              </View>
+            </View>
+
+            <View style={styles.profileTextGroup}>
+              <View style={styles.nameRow}>
+                <Text style={styles.profileName} numberOfLines={1}>
+                  {profile.name}
+                </Text>
+                <View style={styles.gradeBadge}>
+                  <Text style={styles.gradeBadgeText}>
+                    {isParent ? "Phụ huynh" : profile.grade || "Lớp 1"}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.roleSubtext}>
+                {isParent ? "Quản lý học tập" : "Học viên nhí ✨"}
+              </Text>
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
-            <Text style={styles.logoutBtnText}>🚪 Đăng xuất</Text>
-          </TouchableOpacity>
+          {/* Right: Gold Stars & Controls */}
+          <View style={styles.headerRightControls}>
+            {/* Stars Counter Pill */}
+            <View style={styles.starsPill}>
+              <Star size={15} color="#785A00" fill="#785A00" />
+              <Text style={styles.starsPillNumber}>{totalStars}</Text>
+            </View>
+
+            {/* Sound Button */}
+            <TouchableOpacity
+              style={styles.circleIconButton}
+              onPress={() => speakGreeting()}
+              activeOpacity={0.8}
+              accessibilityLabel="Nghe lời chào"
+            >
+              <Volume2 size={18} color="#00658D" />
+            </TouchableOpacity>
+
+            {/* Settings / Switch Profile Button */}
+            <TouchableOpacity
+              style={styles.circleIconButton}
+              onPress={handleSwitchProfile}
+              activeOpacity={0.8}
+              accessibilityLabel="Cài đặt đổi hồ sơ"
+            >
+              <Settings size={18} color="#6F7880" />
+            </TouchableOpacity>
+          </View>
         </View>
+      </View>
+
+      {/* 2. MAIN SCROLLABLE CONTENT CANVAS */}
+      <ScrollView
+        contentContainerStyle={styles.scrollCanvas}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* SECTION 1: HERO MASCOT & SPEECH BUBBLE */}
+        <View style={styles.heroBanner}>
+          {/* Decorative Clouds Background */}
+          <View style={styles.cloudBlob1} />
+          <View style={styles.cloudBlob2} />
+
+          <View style={styles.heroInner}>
+            {/* Speech Bubble from Bubu */}
+            <View style={styles.speechBubble}>
+              <View style={styles.speechTextGroup}>
+                <Text style={styles.speechTitle}>
+                  {profile.name} ơi! ✨
+                </Text>
+                <Text style={styles.speechSubtitle}>
+                  Cùng ngắm những huy hiệu lấp lánh bé đã thu thập được nhé!
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.speechAudioBtn}
+                onPress={() => speakGreeting()}
+                activeOpacity={0.8}
+              >
+                <Volume2 size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Mascot & Encouragement Display */}
+            <View style={styles.mascotRow}>
+              <View style={styles.mascotAvatarBox}>
+                <Text style={styles.mascotEmoji}>🦁</Text>
+              </View>
+
+              <View style={styles.encouragementWrapper}>
+                <View style={styles.encouragementBadge}>
+                  <Star size={11} color="#765900" fill="#765900" />
+                  <Text style={styles.encouragementBadgeText}>
+                    Siêu nhí chăm chỉ
+                  </Text>
+                </View>
+                <Text style={styles.encouragementText}>
+                  Đã đạt {earnedBadgesCount} huy hiệu xuất sắc! 🌟
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 2: STAT SUMMARY CARDS (3D PILLOW TOKENS) */}
+        <View style={styles.statsSummaryRow}>
+          {/* Token 1: Badges */}
+          <View style={styles.statTokenCard}>
+            <View style={[styles.statTokenIconWrap, { backgroundColor: "#FFDF9B" }]}>
+              <Trophy size={18} color="#251A00" />
+            </View>
+            <Text style={styles.statTokenLabel}>Huy hiệu</Text>
+            <Text style={styles.statTokenNumber}>{earnedBadgesCount}</Text>
+          </View>
+
+          {/* Token 2: Stars */}
+          <View style={styles.statTokenCard}>
+            <View style={[styles.statTokenIconWrap, { backgroundColor: "#FFD167" }]}>
+              <Star size={18} color="#765900" fill="#765900" />
+            </View>
+            <Text style={styles.statTokenLabel}>Ngôi sao</Text>
+            <Text style={styles.statTokenNumber}>{totalStars}</Text>
+          </View>
+
+          {/* Token 3: Stickers */}
+          <View style={styles.statTokenCard}>
+            <View style={[styles.statTokenIconWrap, { backgroundColor: "#FFDAD8" }]}>
+              <Heart size={18} color="#AE2F34" fill="#AE2F34" />
+            </View>
+            <Text style={styles.statTokenLabel}>Bạn nhỏ</Text>
+            <Text style={styles.statTokenNumber}>{stickersCount}</Text>
+          </View>
+        </View>
+
+        {/* SECTION 3: BADGES SECTION */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeadingRow}>
+            <View style={styles.headingLeftGroup}>
+              <View style={[styles.headingIndicator, { backgroundColor: "#4DA8DA" }]} />
+              <Text style={styles.sectionMainTitle}>Huy hiệu toán học</Text>
+            </View>
+            <View style={[styles.countPill, { backgroundColor: "#C6E7FF" }]}>
+              <Text style={[styles.countPillText, { color: "#00658D" }]}>
+                {earnedBadgesCount}/6 đã đạt
+              </Text>
+            </View>
+          </View>
+
+          {/* 2-Column Grid of 3D Badges */}
+          <View style={styles.badgesGrid}>
+            {DEFAULT_BADGES.map((badge) => {
+              const isEarned = badge.status === "earned";
+              const isInProgress = badge.status === "in_progress";
+              const isLocked = badge.status === "locked";
+
+              return (
+                <View
+                  key={badge.id}
+                  style={[
+                    styles.badgeCard3D,
+                    isLocked && styles.badgeCardLocked,
+                  ]}
+                >
+                  {/* Earned Checkmark Indicator */}
+                  {isEarned && (
+                    <View style={styles.earnedCheckmark}>
+                      <Check size={11} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                  )}
+
+                  {/* Badge Icon Circle */}
+                  <View
+                    style={[
+                      styles.badgeEmojiCircle,
+                      isLocked && styles.badgeEmojiCircleLocked,
+                    ]}
+                  >
+                    {isLocked ? (
+                      <Lock size={22} color="#6F7880" />
+                    ) : (
+                      <Text style={styles.badgeEmojiText}>{badge.emoji}</Text>
+                    )}
+                  </View>
+
+                  {/* Badge Info */}
+                  <Text
+                    style={[
+                      styles.badgeTitle,
+                      isLocked && styles.badgeTitleLocked,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {badge.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.badgeDesc,
+                      isLocked && styles.badgeDescLocked,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {badge.description}
+                  </Text>
+
+                  {/* Progress Bar for in-progress badge */}
+                  {isInProgress && (
+                    <View style={styles.progressBarWrapper}>
+                      <View style={styles.progressBarTrack}>
+                        <View
+                          style={[
+                            styles.progressBarFill,
+                            { width: `${(badge.progress || 0.5) * 100}%` },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Badge Tag */}
+                  <View
+                    style={[
+                      styles.badgeTagPill,
+                      {
+                        backgroundColor: isLocked
+                          ? "#F3EAFF"
+                          : badge.color || "#FFDF9B",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeTagText,
+                        { color: isLocked ? "#6F7880" : "#5B4300" },
+                      ]}
+                    >
+                      {badge.tag}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* SECTION 4: STICKERS / PET FRIENDS COLLECTION */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeadingRow}>
+            <View style={styles.headingLeftGroup}>
+              <View style={[styles.headingIndicator, { backgroundColor: "#FF7372" }]} />
+              <Text style={styles.sectionMainTitle}>Bạn nhỏ đồng hành</Text>
+            </View>
+            <View style={[styles.countPill, { backgroundColor: "#FFDAD8" }]}>
+              <Text style={[styles.countPillText, { color: "#AE2F34" }]}>
+                {DEFAULT_STICKERS.length} bạn
+              </Text>
+            </View>
+          </View>
+
+          {/* Audio Instruction Prompt Pill */}
+          <View style={styles.instructionPill}>
+            <Volume2 size={16} color="#00658D" />
+            <Text style={styles.instructionText}>
+              Chạm vào bạn nhỏ để nghe lời chào vui nhộn nhé!
+            </Text>
+          </View>
+
+          {/* 3-Column Grid of Chubby Animal Sticker Cards (Max 3 items per row) */}
+          <View style={styles.stickersGrid}>
+            {DEFAULT_STICKERS.map((sticker) => (
+              <TouchableOpacity
+                key={sticker.id}
+                style={styles.stickerCard3D}
+                activeOpacity={0.85}
+                onPress={() => speakGreeting(sticker.soundText)}
+              >
+                <View
+                  style={[
+                    styles.stickerAvatarWrap,
+                    { backgroundColor: sticker.bg },
+                  ]}
+                >
+                  <Text style={styles.stickerAvatarEmoji}>{sticker.emoji}</Text>
+                </View>
+
+                <Text style={styles.stickerNameText} numberOfLines={1}>
+                  {sticker.name}
+                </Text>
+
+                <View
+                  style={[
+                    styles.stickerTagBadge,
+                    { backgroundColor: sticker.bg },
+                  ]}
+                >
+                  <Volume2 size={9} color={sticker.color} />
+                  <Text
+                    style={[styles.stickerTagText, { color: sticker.color }]}
+                    numberOfLines={1}
+                  >
+                    {sticker.tag}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* SECTION 5: BIG CELEBRATORY CALL TO PLAY BUTTON */}
+        <TouchableOpacity
+          style={styles.celebratoryPlayButton}
+          activeOpacity={0.88}
+          onPress={() => router.push("/(tabs)/journey")}
+        >
+          <View style={styles.playIconCircle}>
+            <Play size={18} color="#FFFFFF" fill="#FFFFFF" />
+          </View>
+          <Text style={styles.celebratoryPlayButtonText}>
+            TIẾP TỤC HÀNH TRÌNH TOÁN
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
+      {/* Parent PIN Modal */}
       <ParentPinModal
         visible={pinModalVisible}
         profile={profile}
         title="Xác thực đổi hồ sơ"
-        subtitle="Nhập mã PIN của bố mẹ để đổi sang hồ sơ khác hoặc thoát ra."
+        subtitle="Nhập mã PIN của bố mẹ để đổi sang hồ sơ khác hoặc mở phần quản lý."
         onClose={() => setPinModalVisible(false)}
         onSuccess={() => {
           setPinModalVisible(false);
@@ -290,407 +576,586 @@ export default function AchievementsRoute() {
   );
 }
 
-function ProfileAvatar({
-  avatarUrl,
-  avatarIcon,
-  avatarColor,
-}: {
-  avatarUrl?: string | null;
-  avatarIcon: string;
-  avatarColor: string;
-}) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const isRemoteImage =
-    Boolean(avatarUrl) &&
-    /^https?:\/\//i.test(avatarUrl ?? "") &&
-    !imageFailed;
-
-  return (
-    <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-      {isRemoteImage ? (
-        <Image
-          source={{ uri: avatarUrl ?? "" }}
-          onError={() => setImageFailed(true)}
-          style={styles.avatarImage}
-          accessibilityLabel="Ảnh đại diện"
-        />
-      ) : (
-        <Text style={styles.avatarEmoji}>{avatarIcon}</Text>
-      )}
-    </View>
-  );
-}
-
-function StatCard({
-  emoji,
-  label,
-  count,
-  color,
-}: {
-  emoji: string;
-  label: string;
-  count?: number;
-  color: string;
-}) {
-  return (
-    <View style={[styles.statCard, { backgroundColor: color }]}>
-      <Text style={styles.statEmoji}>{emoji}</Text>
-      <Text style={styles.statCount}>{count ?? "—"}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function AchievementImage({
-  imageUrl,
-  placeholder,
-  style,
-}: {
-  imageUrl: string | null;
-  placeholder: string;
-  style: object;
-}) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  if (!imageUrl || imageFailed) {
-    return (
-      <View style={[style, styles.imagePlaceholder]}>
-        <Text style={styles.placeholderEmoji}>{placeholder}</Text>
-      </View>
-    );
-  }
-
-  return (
-    <Image
-      source={{ uri: imageUrl }}
-      onError={() => setImageFailed(true)}
-      resizeMode="contain"
-      style={style}
-      accessibilityLabel="Hình ảnh thành tích"
-    />
-  );
-}
-
-function BadgeCard({ badge }: { badge: BadgeAchievement }) {
-  return (
-    <View style={styles.badgeCard}>
-      <AchievementImage
-        imageUrl={badge.image_url}
-        placeholder="🏅"
-        style={styles.badgeImage}
-      />
-      <Text numberOfLines={2} style={styles.badgeName}>
-        {badge.name}
-      </Text>
-      {badge.description ? (
-        <Text numberOfLines={2} style={styles.badgeDescription}>
-          {badge.description}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-function StickerCard({ sticker }: { sticker: StickerAchievement }) {
-  return (
-    <View style={styles.stickerCard}>
-      <AchievementImage
-        imageUrl={sticker.image_url}
-        placeholder="🌟"
-        style={styles.stickerImage}
-      />
-      <Text numberOfLines={2} style={styles.stickerName}>
-        {sticker.name}
-      </Text>
-    </View>
-  );
-}
-
-function EmptyState({ emoji, message }: { emoji: string; message: string }) {
-  return (
-    <View style={styles.emptyCard}>
-      <Text style={styles.emptyEmoji}>{emoji}</Text>
-      <Text style={styles.emptyText}>{message}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
+  // Root Screen
+  screen: {
     flex: 1,
-    backgroundColor: "#141414",
+    backgroundColor: "#FDF7FF",
   },
-  navBar: {
+
+  // 1. TOP APP BAR HEADER
+  topAppBar: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderBottomLeftRadius: 48,
+    borderBottomRightRadius: 48,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 0, 0, 0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    zIndex: 10,
+  },
+  headerInner: {
+    width: "100%",
+    maxWidth: 448,
+    alignSelf: "center",
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#262626",
+    paddingVertical: 12,
   },
-  profileBadge: {
+  profileContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#262626",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  miniAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 6,
-  },
-  miniAvatarEmoji: {
-    fontSize: 14,
-  },
-  profileBadgeName: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
-    marginRight: 6,
-  },
-  switchText: {
-    color: "#A0A0A0",
-    fontSize: 10,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  banner: {
-    borderRadius: 16,
-    padding: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  kidBannerBg: {
-    backgroundColor: "#1E1B4B",
-    borderWidth: 1,
-    borderColor: "#4338CA",
-  },
-  parentBannerBg: {
-    backgroundColor: "#0F172A",
-    borderWidth: 1,
-    borderColor: "#38BDF8",
-  },
-  bannerInfo: {
+    gap: 10,
     flex: 1,
   },
-  welcomeTag: {
-    color: "#FFD700",
-    fontSize: 11,
-    fontWeight: "bold",
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  bannerTitle: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  bannerSubtitle: {
-    color: "#94A3B8",
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  speakBtn: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  speakBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  bannerAvatarBig: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "rgba(255,255,255,0.1)",
+  avatarRing: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "#4DA8DA",
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 12,
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  bigAvatarEmoji: {
-    fontSize: 40,
+  avatarEmoji: {
+    fontSize: 26,
   },
-  section: {
-    marginBottom: 28,
+  avatarMiniBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#FFD167",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  sectionTitle: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
+  profileTextGroup: {
+    flex: 1,
   },
-  cardsGrid: {
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  profileName: {
+    color: "#00658D",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  gradeBadge: {
+    backgroundColor: "#C6E7FF",
+    borderRadius: 9999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  gradeBadgeText: {
+    color: "#001E2D",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  roleSubtext: {
+    color: "#3F484F",
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 1,
+  },
+  headerRightControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  starsPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFDF9B",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  starsPillNumber: {
+    color: "#251A00",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  circleIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#F3EAFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  // 2. MAIN SCROLLABLE CONTENT CANVAS
+  scrollCanvas: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 128,
+    maxWidth: 448,
+    alignSelf: "center",
+    width: "100%",
+    gap: 24,
+  },
+
+  // SECTION 1: HERO MASCOT & SPEECH BUBBLE
+  heroBanner: {
+    width: "100%",
+    backgroundColor: "#DDF1FF",
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    padding: 20,
+    position: "relative",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  cloudBlob1: {
+    position: "absolute",
+    width: 96,
+    height: 96,
+    right: -22,
+    top: -22,
+    borderRadius: 48,
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+  },
+  cloudBlob2: {
+    position: "absolute",
+    width: 120,
+    height: 64,
+    left: "30%",
+    bottom: -15,
+    borderRadius: 32,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  },
+  heroInner: {
+    position: "relative",
+    zIndex: 2,
+    gap: 12,
+  },
+  speechBubble: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: "#EEE4FF",
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  speechTextGroup: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  speechTitle: {
+    color: "#1E1830",
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 28,
+    letterSpacing: 0.2,
+    marginBottom: 2,
+  },
+  speechSubtitle: {
+    color: "#3F484F",
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "500",
+    letterSpacing: 0.2,
+  },
+  speechAudioBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#4DA8DA",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  mascotRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    paddingTop: 8,
+    paddingHorizontal: 8,
+  },
+  mascotAvatarBox: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    borderWidth: 2,
+    borderColor: "#FFFDF9",
+    borderBottomWidth: 4,
+    borderBottomColor: "#E5DEC9",
+  },
+  mascotEmoji: {
+    fontSize: 54,
+  },
+  encouragementWrapper: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingLeft: 12,
+    paddingBottom: 4,
+  },
+  encouragementBadge: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFD167",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
     borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     gap: 4,
   },
-  leadBadgeIcon: {
-    fontSize: 12,
-  },
-  leadBadgeText: {
+  encouragementBadgeText: {
     color: "#765900",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   encouragementText: {
     color: "#00658D",
     fontSize: 13,
     fontWeight: "700",
+    marginTop: 4,
+    textAlign: "right",
   },
 
-  // SECTION 2: STAT SUMMARY CARDS (3D TOKENS)
+  // SECTION 2: STAT SUMMARY CARDS (3D PILLOW TOKENS)
   statsSummaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 10,
   },
-  lessonCard: {
-    width: "48%",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#ffffff15",
+  statTokenCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: "#FFFDF9",
+    borderBottomWidth: 5,
+    borderBottomColor: "#E5DEC9",
+    padding: 12,
+    alignItems: "center",
+    shadowColor: "#5C5470",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  cardEmoji: {
-    fontSize: 32,
-    marginBottom: 10,
+  statTokenIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
   },
-  cardTitle: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  cardDesc: {
-    color: "#94A3B8",
+  statTokenLabel: {
+    color: "#3F484F",
     fontSize: 12,
-    marginBottom: 14,
+    fontWeight: "500",
   },
-  startBadge: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingVertical: 6,
+  statTokenNumber: {
+    color: "#1E1830",
+    fontSize: 22,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  // SECTION 3 & 4: HEADINGS
+  sectionContainer: {
+    gap: 12,
+  },
+  sectionHeadingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  headingLeftGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headingIndicator: {
+    width: 12,
+    height: 24,
+    borderRadius: 9999,
+  },
+  sectionMainTitle: {
+    color: "#1E1830",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  countPill: {
+    borderRadius: 9999,
     paddingHorizontal: 10,
-    borderRadius: 6,
-    alignSelf: "flex-start",
+    paddingVertical: 4,
   },
-  startBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "bold",
+  countPillText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
-  parentStatsRow: {
+
+  // 2-Column Badges Grid
+  badgesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 20,
+    gap: 12,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#1E293B",
-    borderRadius: 10,
+  badgeCard3D: {
+    width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 32,
+    borderWidth: 3,
+    borderColor: "#FFFDF9",
+    borderBottomWidth: 5,
+    borderBottomColor: "#E5DEC9",
     padding: 14,
-    marginHorizontal: 4,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
+    position: "relative",
+    shadowColor: "#5C5470",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  statNumber: {
-    color: "#38BDF8",
+  badgeCardLocked: {
+    backgroundColor: "#F4EFEA",
+    borderColor: "#EADBCE",
+    borderBottomColor: "#D6C7B8",
+    opacity: 0.9,
+  },
+  earnedCheckmark: {
+    position: "absolute",
+    right: 11,
+    top: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#10B981",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  badgeEmojiCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#FFF8EA",
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 6,
+  },
+  badgeEmojiCircleLocked: {
+    backgroundColor: "#E9DDFF",
+    borderWidth: 2,
+    borderColor: "#BFC8D0",
+    borderStyle: "dashed",
+  },
+  badgeEmojiText: {
+    fontSize: 38,
+  },
+  badgeTitle: {
+    color: "#1E1830",
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
+    fontWeight: "700",
+    textAlign: "center",
+    letterSpacing: 0.2,
+    marginTop: 4,
   },
-  statLabel: {
-    color: "#94A3B8",
+  badgeTitleLocked: {
+    color: "#6F7880",
+  },
+  badgeDesc: {
+    color: "#3F484F",
+    fontSize: 12.5,
+    fontWeight: "400",
+    textAlign: "center",
+    marginTop: 2,
+    minHeight: 32,
+  },
+  badgeDescLocked: {
+    color: "#BFC8D0",
+  },
+  progressBarWrapper: {
+    width: "100%",
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  progressBarTrack: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#EEE4FF",
+    borderWidth: 1,
+    borderColor: "#F3EAFF",
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#4DA8DA",
+    borderRadius: 5,
+  },
+  badgeTagPill: {
+    borderRadius: 9999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginTop: 6,
+  },
+  badgeTagText: {
     fontSize: 11,
+    fontWeight: "700",
     textAlign: "center",
   },
-  parentActionList: {
-    backgroundColor: "#1E293B",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  parentActionItem: {
+
+  // SECTION 4: STICKERS
+  instructionPill: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#334155",
+    backgroundColor: "#F8F1FF",
+    borderWidth: 1,
+    borderColor: "#F3EAFF",
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  parentActionIcon: {
-    fontSize: 22,
-    marginRight: 14,
-  },
-  parentActionContent: {
+  instructionText: {
+    color: "#3F484F",
+    fontSize: 13,
+    fontWeight: "500",
     flex: 1,
   },
-  parentActionTitle: {
+  stickersGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    gap: 10,
+  },
+  stickerCard3D: {
+    width: "31.2%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "#FFFDF9",
+    borderBottomWidth: 4,
+    borderBottomColor: "#E5DEC9",
+    padding: 10,
+    alignItems: "center",
+    shadowColor: "#5C5470",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  stickerAvatarWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  stickerAvatarEmoji: {
+    fontSize: 28,
+  },
+  stickerNameText: {
+    color: "#1E1830",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
+  stickerTagBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 9999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 3,
+  },
+  stickerTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  // SECTION 5: CELEBRATORY CALL TO PLAY BUTTON
+  celebratoryPlayButton: {
+    height: 72,
+    backgroundColor: "#FF7372",
+    borderRadius: 9999,
+    borderWidth: 3,
+    borderColor: "rgba(255, 255, 255, 0.7)",
+    borderBottomWidth: 6,
+    borderBottomColor: "#D84544",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+    shadowColor: "#FF7372",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  playIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  celebratoryPlayButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  parentActionSub: {
-    color: "#94A3B8",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  arrowText: {
-    color: "#64748B",
-    fontSize: 20,
-  },
-  footerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  switchProfileBtn: {
-    flex: 1,
-    backgroundColor: "#262626",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginRight: 8,
-  },
-  switchProfileBtnText: {
-    color: "#E5E5E5",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  logoutBtn: {
-    flex: 1,
-    backgroundColor: "#331515",
-    borderWidth: 1,
-    borderColor: "#E50914",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginLeft: 8,
-  },
-  logoutBtnText: {
-    color: "#FF6B6B",
-    fontWeight: "bold",
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 0.55,
   },
 });
