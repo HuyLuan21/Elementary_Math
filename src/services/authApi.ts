@@ -12,6 +12,7 @@ export interface UserData {
   role?: string;
   avatar_url?: string;
   is_active?: boolean;
+  pin_enabled: boolean;
 }
 
 export interface LoginResponse {
@@ -26,13 +27,25 @@ export interface LoginResponse {
 
 export interface LoginParams {
   email: string;
-  password?: string;
+  password: string;
 }
 
 export interface RegisterParams {
   full_name: string;
   email: string;
-  password?: string;
+  password: string;
+}
+
+export interface PinSetupResponse {
+  data: {
+    pin_enabled: boolean;
+  };
+}
+
+export interface PinVerifyResponse {
+  data: {
+    verified: boolean;
+  };
 }
 
 export const authApi = {
@@ -50,13 +63,29 @@ export const authApi = {
     full_name,
     email,
     password,
-  }: RegisterParams): Promise<any> => {
+  }: RegisterParams): Promise<unknown> => {
     const response = await apiClient.post("/auth/register", {
       full_name: full_name.trim(),
       email: email.trim(),
       password,
     });
     return response.data;
+  },
+
+  // Set the authenticated user's parent PIN
+  setPin: async (pin: string): Promise<PinSetupResponse> => {
+    const response = await apiClient.post<PinSetupResponse>("/auth/pin/setup", {
+      pin,
+    });
+    return response.data;
+  },
+
+  // Verify the authenticated user's parent PIN
+  verifyPin: async (pin: string): Promise<boolean> => {
+    const response = await apiClient.post<PinVerifyResponse>("/auth/pin/verify", {
+      pin,
+    });
+    return response.data.data.verified;
   },
 
   // Get current authenticated user

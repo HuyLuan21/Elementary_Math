@@ -1,10 +1,15 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 
 export const BrandHeader: React.FC = () => {
   return (
     <View style={styles.header}>
-      <Text style={styles.logoRed}>E-Math</Text>
+      <Image
+        source={require("../../assets/logo.png")}
+        style={styles.logo}
+        resizeMode="contain"
+        accessibilityLabel="E-Math"
+      />
     </View>
   );
 };
@@ -15,22 +20,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoRed: {
-    color: "#E50914",
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  badgeMathContainer: {
-    backgroundColor: "#FFD700",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  badgeMathText: {
-    color: "#000000",
-    fontSize: 12,
-    fontWeight: "bold",
+  logo: {
+    width: 50,
+    height: 50,
   },
 });

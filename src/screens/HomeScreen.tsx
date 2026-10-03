@@ -198,12 +198,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <TouchableOpacity style={styles.parentActionItem}>
                 <Text style={styles.parentActionIcon}>🔑</Text>
                 <View style={styles.parentActionContent}>
-                  <Text style={styles.parentActionTitle}>
-                    Cài đặt mã PIN Phụ huynh
-                  </Text>
-                  <Text style={styles.parentActionSub}>
-                    Mã PIN hiện tại: 1234
-                  </Text>
+                  <Text style={styles.parentActionTitle}>Cài đặt mã PIN Phụ huynh</Text>
+                  <Text style={styles.parentActionSub}>Quản lý bảo mật tài khoản</Text>
                 </View>
                 <Text style={styles.arrowText}>›</Text>
               </TouchableOpacity>

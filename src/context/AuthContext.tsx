@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserProfile, AuthContextType } from '../types/auth';
+import React, { createContext, useContext, useState } from 'react';
+import { UserProfile, AuthContextType, ProfileInput } from '../types/auth';
 import { UserData, setAuthToken as setApiAuthToken } from '../services/authApi';
 import { profileApi, ApiProfileData } from '../services/profileApi';
 import { storage } from '../utils/storage';
 
-const AVATAR_COLORS = ['#E11D48', '#0EA5E9', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
+const AVATAR_COLORS = ['#DDF2FF', '#FFF0BE', '#DDF7E5', '#E4F3FA', '#FFF6D9'];
 const AVATAR_ICONS = ['🦁', '🦄', '🐼', '🐶', '🐱', '🦊', '🐯', '🐰'];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +16,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState<boolean>(false);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
+
+  const mapBackendProfile = (profile: ApiProfileData, index: number): UserProfile => ({
+    id: profile.id,
+    name: profile.display_name,
+    role: 'child',
+    avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
+    avatarIcon:
+      profile.avatar_url && AVATAR_ICONS.includes(profile.avatar_url)
+        ? profile.avatar_url
+        : AVATAR_ICONS[index % AVATAR_ICONS.length],
+    avatarUrl: profile.avatar_url,
+    totalStars: profile.total_stars,
+    birthDate: profile.birth_date,
+  });
 
   // Tự động khôi phục phiên đăng nhập và hồ sơ bé đang chọn khi F5 / mở lại app
   useEffect(() => {
@@ -60,23 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: 'parent-main',
       name: parentName,
       role: 'parent',
-      avatarColor: '#4F46E5',
+      avatarColor: '#DDF2FF',
       avatarIcon: '👨‍👩‍👧‍👦',
-      pinCode: '1234',
     };
 
-    const kidProfiles: UserProfile[] = apiProfiles.map((p, index) => ({
-      id: p.id,
-      name: p.display_name,
-      role: 'child',
-      avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
-      avatarIcon: AVATAR_ICONS[index % AVATAR_ICONS.length],
-      avatarUrl: p.avatar_url,
-      totalStars: p.total_stars,
-      birthDate: p.birth_date,
-      grade: 'Lớp 1',
-      pinCode: '1234',
-    }));
+    const kidProfiles = apiProfiles.map(mapBackendProfile);
 
     return [parentProfile, ...kidProfiles];
   };
@@ -86,10 +89,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const apiProfiles = await profileApi.getProfiles(token);
       const mapped = mapBackendProfiles(apiProfiles, user || currentUser);
+      setProfilesError(null);
       setProfiles(mapped);
-    } catch (error) {
+      setActiveProfile((current) => {
+        if (!current) return null;
+        const refreshedProfile = mapped.find((profile) => profile.id === current.id);
+        if (refreshedProfile) return refreshedProfile;
+        if (current.role === 'child') {
+          return mapped.find((profile) => profile.role === 'child') || null;
+        }
+        return mapped.find((profile) => profile.role === 'parent') || null;
+      });
+    } catch (error: unknown) {
       console.warn('Lỗi khi tải hồ sơ từ backend:', error);
-      setProfiles(mapBackendProfiles([], user || currentUser));
+      setProfilesError(
+        error instanceof Error ? error.message : 'Không thể tải danh sách hồ sơ.'
+      );
+      setProfiles((current) =>
+        current.length ? current : mapBackendProfiles([], user || currentUser)
+      );
     } finally {
       setLoadingProfiles(false);
     }
@@ -122,6 +140,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storage.setItem('emath_active_profile', JSON.stringify(profile));
   };
 
+  const updateCurrentUser = (user: UserData) => {
+    setCurrentUser(user);
+  };
+
   const signOut = () => {
     setUserEmail(null);
     setCurrentUser(null);
@@ -135,52 +157,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storage.removeItem('emath_active_profile');
   };
 
-  const addProfile = async (name: string, grade?: string, avatarUrl?: string) => {
-    const kidName = name.trim() || `Bé Mới ${profiles.length}`;
-    if (authToken) {
-      try {
-        await profileApi.createProfile(authToken, {
-          display_name: kidName,
-          avatar_url: avatarUrl || `/avatars/kid.png`,
-        });
-        await refreshProfiles();
-      } catch (error) {
-        console.error('Lỗi khi tạo hồ sơ mới:', error);
-        throw error;
-      }
-    }
+  const addProfile = async (profile: ProfileInput) => {
+    if (!authToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    const createdProfile = await profileApi.createProfile(authToken, profile);
+    setProfiles((current) => {
+      const childProfiles = current.filter((item) => item.role === 'child');
+      const mappedProfile = mapBackendProfile(createdProfile, childProfiles.length);
+      return [...current.filter((item) => item.role === 'parent'), ...childProfiles, mappedProfile];
+    });
+    setProfilesError(null);
   };
 
-  const editProfile = async (profileId: string, name: string, avatarUrl?: string) => {
-    if (authToken) {
-      try {
-        await profileApi.updateProfile(authToken, profileId, {
-          display_name: name.trim(),
-          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-        });
-        await refreshProfiles();
-      } catch (error) {
-        console.error('Lỗi khi cập nhật hồ sơ:', error);
-        throw error;
-      }
-    }
+  const editProfile = async (profileId: string, profile: Partial<ProfileInput>) => {
+    if (!authToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    const updatedProfile = await profileApi.updateProfile(authToken, profileId, profile);
+    setProfiles((current) => {
+      const childIndex = current
+        .filter((item) => item.role === 'child')
+        .findIndex((item) => item.id === profileId);
+      if (childIndex < 0) return current;
+      const mappedProfile = mapBackendProfile(updatedProfile, childIndex);
+      return current.map((item) => (item.id === profileId ? mappedProfile : item));
+    });
+    setActiveProfile((current) =>
+      current?.id === profileId
+        ? mapBackendProfile(
+            updatedProfile,
+            profiles.filter((item) => item.role === 'child').findIndex((item) => item.id === profileId)
+          )
+        : current
+    );
   };
 
   const deleteProfile = async (profileId: string) => {
-    if (authToken) {
-      try {
-        await profileApi.deleteProfile(authToken, profileId);
-        await refreshProfiles();
-      } catch (error) {
-        console.error('Lỗi khi xóa hồ sơ:', error);
-        throw error;
-      }
-    }
-  };
-
-  const verifyParentPin = (inputPin: string): boolean => {
-    const validPin = '1234';
-    return inputPin.trim() === validPin;
+    if (!authToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    await profileApi.deleteProfile(authToken, profileId);
+    const remainingChildren = profiles.filter(
+      (item) => item.role === 'child' && item.id !== profileId
+    );
+    setProfiles((current) => current.filter((item) => item.id !== profileId));
+    setActiveProfile((active) =>
+      active?.id === profileId ? remainingChildren[0] || null : active
+    );
   };
 
   return (
@@ -192,14 +210,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeProfile,
         profiles,
         loadingProfiles,
+        profilesError,
         login,
         selectProfile,
         signOut,
         addProfile,
         editProfile,
         deleteProfile,
-        verifyParentPin,
         refreshProfiles,
+        updateCurrentUser,
       }}
     >
       {children}

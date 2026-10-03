@@ -5,8 +5,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Modal,
-  TextInput,
   Alert,
   Platform,
 } from "react-native";
@@ -28,11 +26,6 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
   onAddProfileRequest,
   onSignOut,
 }) => {
-  const [selectedParentProfile, setSelectedParentProfile] =
-    useState<UserProfile | null>(null);
-  const [pinModalVisible, setPinModalVisible] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleProfileClick = (profile: UserProfile) => {
@@ -44,28 +37,7 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
       return;
     }
 
-    if (profile.role === "parent") {
-      // Open PIN verification modal for parent profile
-      setSelectedParentProfile(profile);
-      setPinInput("");
-      setPinError("");
-      setPinModalVisible(true);
-    } else {
-      // Directly select student profile
-      onSelectProfile(profile);
-    }
-  };
-
-  const handleVerifyPin = () => {
-    if (!selectedParentProfile) return;
-    const requiredPin = selectedParentProfile.pinCode || "1234";
-
-    if (pinInput === requiredPin) {
-      setPinModalVisible(false);
-      onSelectProfile(selectedParentProfile);
-    } else {
-      setPinError("Mã PIN không đúng!Vui lòng thử lại (Gợi ý: 1234)");
-    }
+    onSelectProfile(profile);
   };
 
   return (
@@ -157,60 +129,6 @@ export const ProfileSelectionScreen: React.FC<ProfileSelectionScreenProps> = ({
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Parent PIN Code Modal */}
-      <Modal
-        visible={pinModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setPinModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalLockEmoji}>🛡️</Text>
-            <Text style={styles.modalTitle}>Xác thực Phụ huynh</Text>
-            <Text style={styles.modalSubtitle}>
-              Nhập mã PIN 4 chữ số để vào khu vực quản lý dành cho cha mẹ.
-            </Text>
-
-            {pinError ? (
-              <Text style={styles.pinErrorText}>{pinError}</Text>
-            ) : null}
-
-            <TextInput
-              style={styles.pinInput}
-              keyboardType="number-pad"
-              maxLength={4}
-              secureTextEntry={true}
-              value={pinInput}
-              onChangeText={(text) => {
-                setPinInput(text);
-                setPinError("");
-              }}
-              placeholder="• • • •"
-              placeholderTextColor="#666"
-              autoFocus={true}
-            />
-
-            <Text style={styles.pinHint}>Mã PIN mặc định: 1234</Text>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelModalBtn}
-                onPress={() => setPinModalVisible(false)}
-              >
-                <Text style={styles.cancelModalText}>Hủy</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.confirmModalBtn}
-                onPress={handleVerifyPin}
-              >
-                <Text style={styles.confirmModalText}>Xác nhận</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };

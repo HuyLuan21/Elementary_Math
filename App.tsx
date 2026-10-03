@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Alert } from 'react-native';
 import { UserProfile } from './src/types/auth';
+import { UserData } from './src/services/authApi';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ProfileSelectionScreen } from './src/screens/ProfileSelectionScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -14,7 +15,6 @@ const INITIAL_PROFILES: UserProfile[] = [
     role: 'parent',
     avatarColor: '#4F46E5', // Indigo blue
     avatarIcon: '👨‍👩‍👧‍👦',
-    pinCode: '1234',
   },
   {
     id: 'kid-1',
@@ -53,7 +53,7 @@ export default function App() {
 
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  const handleLoginSuccess = (email: string, user?: any, token?: string) => {
+  const handleLoginSuccess = (email: string, user?: UserData, token?: string) => {
     setUserEmail(email);
     if (token) {
       setAuthToken(token);
