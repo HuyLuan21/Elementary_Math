@@ -29,7 +29,7 @@ import { COLORS } from "../src/theme";
 
 export default function LoginRoute() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isRestoring, currentUser, authToken } = useAuth();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
 
@@ -45,6 +45,13 @@ export default function LoginRoute() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Tự động chuyển trang hồ sơ nếu phiên đăng nhập đã được khôi phục thành công
+  React.useEffect(() => {
+    if (!isRestoring && currentUser && authToken) {
+      router.replace("/profiles");
+    }
+  }, [isRestoring, currentUser, authToken, router]);
 
   // Xử lý thông báo lỗi và thành công
   const clearMessages = () => {
@@ -80,10 +87,16 @@ export default function LoginRoute() {
         await login(
           res.data.email || trimmedEmail,
           res.data,
-          res.access_token
+          res.access_token,
+          res.refresh_token
         );
       } else {
-        await login(trimmedEmail, undefined, res.access_token);
+        await login(
+          trimmedEmail,
+          undefined,
+          res.access_token,
+          res.refresh_token
+        );
       }
 
       // Đăng nhập thành công thì chuyển sang quản lý hồ sơ bé

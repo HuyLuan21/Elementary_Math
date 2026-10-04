@@ -2238,6 +2238,11 @@ expo-router@~57.0.21:
     standard-navigation "^0.0.5"
     vaul "^1.1.2"
 
+expo-secure-store@^57.0.4:
+  version "57.0.4"
+  resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-57.0.4.tgz#a5eefc7490d1de26fd62e83bc5fdceacd94f5342"
+  integrity sha512-7zBA1RThURTXdP4w65kBzZNbcSsfArqVd+p+ETAnPRWXO8J296Qd0YaCVyRpJ0HSwlCnGdvOnqO+NgSreHsOhA==
+
 expo-server@^57.0.3:
   version "57.0.3"
   resolved "https://registry.yarnpkg.com/expo-server/-/expo-server-57.0.3.tgz#02e038a85453f1f4eb00024256b4b3cab949cace"
@@ -3672,7 +3677,7 @@ react-native-screens@~4.26.0:
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
 
-react-native-svg@^15.15.1:
+react-native-svg@^15.15.5:
   version "15.15.5"
   resolved "https://registry.yarnpkg.com/react-native-svg/-/react-native-svg-15.15.5.tgz#822805c14481b8ec16d5fbac1e3ce2b27a5509d7"
   integrity sha512-L4go5jA+GWutdJ/JucuN20cjAbMg1HmMtAP+wZ+3JLCf6Jd0bhXQHxciRP/AQm/FlrIEZwkMcHNZP+FXAiic0w==

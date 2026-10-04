@@ -17,6 +17,7 @@ import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { emathApi, QuestionData } from "../../src/services/emathApi";
 import { storage } from "../../src/utils/storage";
+import { ParentPinModal } from "../../src/components/ParentPinModal";
 
 const { width } = Dimensions.get("window");
 
@@ -117,6 +118,15 @@ export default function LessonScreen() {
   const [earnedXp, setEarnedXp] = useState(0);
   const [showExitModal, setShowExitModal] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
+
+  const handleSwitchProfile = () => {
+    if (activeProfile?.role === "child" || !activeProfile) {
+      setPinModalVisible(true);
+    } else {
+      router.replace("/profiles");
+    }
+  };
 
   // Animation values
   const heartScaleAnim = useRef(new Animated.Value(1)).current;
@@ -421,12 +431,22 @@ export default function LessonScreen() {
             <TouchableOpacity
               style={styles.lockedSecondaryBtn}
               activeOpacity={0.85}
-              onPress={() => router.replace("/profiles")}
+              onPress={handleSwitchProfile}
             >
               <Text style={styles.lockedSecondaryBtnText}>ĐỔI HỒ SƠ KHÁC 👨‍👩‍👧‍👦</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        <ParentPinModal
+          visible={pinModalVisible}
+          mode="verify"
+          onClose={() => setPinModalVisible(false)}
+          onSuccess={() => {
+            setPinModalVisible(false);
+            router.replace("/profiles");
+          }}
+        />
       </SafeAreaView>
     );
   }

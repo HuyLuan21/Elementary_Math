@@ -44,7 +44,11 @@ export default function ProfilesRoute() {
   const handleProfileClick = (profile: UserProfile) => {
     if (activeProfile?.id === profile.id || !activeProfile) {
       selectProfile(profile);
-      router.replace("/(tabs)");
+      if (profile.role === "parent") {
+        router.replace("/(tabs)/parent");
+      } else {
+        router.replace("/(tabs)/journey");
+      }
       return;
     }
 
@@ -54,10 +58,15 @@ export default function ProfilesRoute() {
 
   const handleProfileSwitchVerified = () => {
     if (!pendingProfile) return;
+    const targetRole = pendingProfile.role;
     selectProfile(pendingProfile);
     setPendingProfile(null);
     setVerifyPinVisible(false);
-    router.replace("/(tabs)");
+    if (targetRole === "parent") {
+      router.replace("/(tabs)/parent");
+    } else {
+      router.replace("/(tabs)/journey");
+    }
   };
 
   const handleVerifyPinClose = () => {
@@ -70,10 +79,10 @@ export default function ProfilesRoute() {
     setVerifyPinVisible(true);
   };
 
-  const handleAccountSwitchVerified = () => {
+  const handleAccountSwitchVerified = async () => {
     setVerifyPinVisible(false);
     setPendingProfile(null);
-    signOut();
+    await signOut();
     router.replace("/");
   };
 

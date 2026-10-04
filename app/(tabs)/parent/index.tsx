@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { LogOut, RefreshCw, Users } from "lucide-react-native";
+import { ArrowLeft, LogOut, RefreshCw, Users } from "lucide-react-native";
 import { useAuth } from "../../../src/context/AuthContext";
 import { parentApi } from "../../../src/services/parentApi";
 import { ParentOverviewProfile } from "../../../src/types/parentReport";
@@ -61,8 +61,8 @@ export default function ParentOverviewRoute() {
     };
   }, [retryCount]);
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
     router.replace("/");
   };
 
@@ -86,14 +86,25 @@ export default function ParentOverviewRoute() {
               <Text style={styles.title}>Góc Ba Mẹ</Text>
             </View>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Đăng xuất"
-            onPress={handleSignOut}
-            style={styles.logoutButton}
-          >
-            <LogOut size={18} color="#687480" />
-          </Pressable>
+          <View style={styles.headerRightActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đổi hồ sơ"
+              onPress={() => router.replace("/profiles")}
+              style={styles.switchProfileButton}
+            >
+              <ArrowLeft size={16} color="#8C6410" />
+              <Text style={styles.switchProfileText}>Đổi hồ sơ</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đăng xuất"
+              onPress={handleSignOut}
+              style={styles.logoutButton}
+            >
+              <LogOut size={18} color="#687480" />
+            </Pressable>
+          </View>
         </View>
 
         <Text style={styles.intro}>
@@ -297,13 +308,36 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "800",
   },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  switchProfileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: "#FFF2D6",
+    borderWidth: 1,
+    borderColor: "#FFE08A",
+  },
+  switchProfileText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#8C6410",
+  },
   logoutButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   intro: {
     color: "#69737E",

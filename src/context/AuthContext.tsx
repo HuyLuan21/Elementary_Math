@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { UserProfile, AuthContextType, ProfileInput } from '../types/auth';
-import { UserData, setAuthToken as setApiAuthToken } from '../services/authApi';
+import { UserData, setAuthToken as setApiAuthToken, authApi, onAuthFailure } from '../services/authApi';
 import { profileApi, ApiProfileData } from '../services/profileApi';
 import { storage } from '../utils/storage';
+import { authStorage } from '../utils/authStorage';
 
 const AVATAR_COLORS = ['#DDF2FF', '#FFF0BE', '#DDF7E5', '#E4F3FA', '#FFF6D9'];
 const AVATAR_ICONS = ['🦁', '🦄', '🐼', '🐶', '🐱', '🦊', '🐯', '🐰'];
@@ -17,6 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState<boolean>(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState<boolean>(true);
 
   const mapBackendProfile = (profile: ApiProfileData, index: number): UserProfile => ({
     id: profile.id,
@@ -32,43 +34,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     birthDate: profile.birth_date,
   });
 
-  // Tự động khôi phục phiên đăng nhập và hồ sơ bé đang chọn khi F5 / mở lại app
-  useEffect(() => {
-    const restoreSession = async () => {
-      try {
-        const storedToken = await storage.getItem('emath_auth_token');
-        const storedEmail = await storage.getItem('emath_user_email');
-        const storedUser = await storage.getItem('emath_current_user');
-        const storedProfile = await storage.getItem('emath_active_profile');
-
-        if (storedToken) {
-          setAuthToken(storedToken);
-          setApiAuthToken(storedToken);
-        }
-        if (storedEmail) setUserEmail(storedEmail);
-        if (storedUser) {
-          try {
-            setCurrentUser(JSON.parse(storedUser));
-          } catch (e) {}
-        }
-        if (storedProfile) {
-          try {
-            setActiveProfile(JSON.parse(storedProfile));
-          } catch (e) {}
-        }
-
-        if (storedToken) {
-          const u = storedUser ? JSON.parse(storedUser) : null;
-          await fetchProfiles(storedToken, u);
-        }
-      } catch (e) {
-        console.warn('Lỗi khôi phục phiên đăng nhập:', e);
-      }
-    };
-
-    restoreSession();
-  }, []);
-
   const mapBackendProfiles = (apiProfiles: ApiProfileData[], user?: UserData | null): UserProfile[] => {
     const parentName = (user?.full_name && user.full_name.trim()) || 'Phụ Huynh';
     const parentProfile: UserProfile = {
@@ -80,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const kidProfiles = apiProfiles.map(mapBackendProfile);
-
     return [parentProfile, ...kidProfiles];
   };
 
@@ -113,7 +77,118 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, user?: UserData, token?: string) => {
+  const signOutInternal = useCallback(async (callBackend: boolean = true) => {
+    const currentAccessToken = authToken || (await authStorage.getAccessToken());
+    const currentRefreshToken = await authStorage.getRefreshToken();
+
+    if (callBackend && (currentAccessToken || currentRefreshToken)) {
+      try {
+        await authApi.logout(currentAccessToken || undefined, currentRefreshToken || undefined);
+      } catch (e) {
+        console.warn('Lỗi khi gọi logout API:', e);
+      }
+    }
+
+    setUserEmail(null);
+    setCurrentUser(null);
+    setAuthToken(null);
+    setApiAuthToken(null);
+    setActiveProfile(null);
+    setProfiles([]);
+
+    await Promise.all([
+      authStorage.clearAuthTokens(),
+      storage.removeItem('emath_auth_token'),
+      storage.removeItem('emath_user_email'),
+      storage.removeItem('emath_current_user'),
+      storage.removeItem('emath_active_profile'),
+    ]);
+  }, [authToken]);
+
+  const signOut = useCallback(async () => {
+    await signOutInternal(true);
+  }, [signOutInternal]);
+
+  // Lắng nghe sự kiện Refresh Token thất bại từ Axios interceptor
+  useEffect(() => {
+    const unsubscribe = onAuthFailure(() => {
+      signOutInternal(false);
+    });
+    return () => unsubscribe();
+  }, [signOutInternal]);
+
+  // Tự động khôi phục phiên đăng nhập khi mở lại app
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        await authStorage.init();
+        let storedAccessToken = await authStorage.getAccessToken();
+        const storedRefreshToken = await authStorage.getRefreshToken();
+        const storedEmail = await storage.getItem('emath_user_email');
+        const storedUser = await storage.getItem('emath_current_user');
+        const storedProfile = await storage.getItem('emath_active_profile');
+
+        // Fallback: nếu chưa có trong authStorage mà có trong legacy storage
+        if (!storedAccessToken) {
+          const legacyToken = await storage.getItem('emath_auth_token');
+          if (legacyToken) {
+            storedAccessToken = legacyToken;
+            await authStorage.setAccessToken(legacyToken);
+          }
+        }
+
+        if (storedEmail) setUserEmail(storedEmail);
+        if (storedUser) {
+          try {
+            setCurrentUser(JSON.parse(storedUser));
+          } catch {}
+        }
+        if (storedProfile) {
+          try {
+            setActiveProfile(JSON.parse(storedProfile));
+          } catch {}
+        }
+
+        if (storedAccessToken || storedRefreshToken) {
+          if (storedAccessToken) {
+            setAuthToken(storedAccessToken);
+            setApiAuthToken(storedAccessToken);
+          }
+
+          try {
+            // Xác thực token với backend qua /auth/me
+            // Nếu access token hết hạn nhưng refresh token hợp lệ, interceptor sẽ tự refresh
+            const me = await authApi.getMe(storedAccessToken || undefined);
+            setCurrentUser(me);
+            await storage.setItem('emath_current_user', JSON.stringify(me));
+
+            const latestToken = (await authStorage.getAccessToken()) || storedAccessToken;
+            if (latestToken) {
+              setAuthToken(latestToken);
+              setApiAuthToken(latestToken);
+              await fetchProfiles(latestToken, me);
+            }
+          } catch (verifyError) {
+            console.warn('Phiên đăng nhập không hợp lệ hoặc refresh thất bại:', verifyError);
+            await signOutInternal(false);
+          }
+        }
+      } catch (e) {
+        console.warn('Lỗi khôi phục phiên đăng nhập:', e);
+      } finally {
+        setIsRestoring(false);
+      }
+    };
+
+    restoreSession();
+  }, [signOutInternal]);
+
+  const login = async (
+    email: string,
+    user?: UserData,
+    token?: string,
+    refreshToken?: string
+  ) => {
     setUserEmail(email);
     await storage.setItem('emath_user_email', email);
 
@@ -121,17 +196,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(user);
       await storage.setItem('emath_current_user', JSON.stringify(user));
     }
+
     if (token) {
       setAuthToken(token);
       setApiAuthToken(token);
+      await authStorage.setAccessToken(token);
       await storage.setItem('emath_auth_token', token);
+    }
+
+    if (refreshToken) {
+      await authStorage.setRefreshToken(refreshToken);
+    }
+
+    if (token) {
       await fetchProfiles(token, user);
     }
   };
 
   const refreshProfiles = async () => {
-    if (authToken) {
-      await fetchProfiles(authToken, currentUser);
+    const activeToken = authToken || (await authStorage.getAccessToken());
+    if (activeToken) {
+      await fetchProfiles(activeToken, currentUser);
     }
   };
 
@@ -142,24 +227,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateCurrentUser = (user: UserData) => {
     setCurrentUser(user);
-  };
-
-  const signOut = () => {
-    setUserEmail(null);
-    setCurrentUser(null);
-    setAuthToken(null);
-    setApiAuthToken(null);
-    setActiveProfile(null);
-    setProfiles([]);
-    storage.removeItem('emath_auth_token');
-    storage.removeItem('emath_user_email');
-    storage.removeItem('emath_current_user');
-    storage.removeItem('emath_active_profile');
+    storage.setItem('emath_current_user', JSON.stringify(user));
   };
 
   const addProfile = async (profile: ProfileInput) => {
-    if (!authToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-    const createdProfile = await profileApi.createProfile(authToken, profile);
+    const activeToken = authToken || (await authStorage.getAccessToken());
+    if (!activeToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    const createdProfile = await profileApi.createProfile(activeToken, profile);
     setProfiles((current) => {
       const childProfiles = current.filter((item) => item.role === 'child');
       const mappedProfile = mapBackendProfile(createdProfile, childProfiles.length);
@@ -169,8 +243,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const editProfile = async (profileId: string, profile: Partial<ProfileInput>) => {
-    if (!authToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-    const updatedProfile = await profileApi.updateProfile(authToken, profileId, profile);
+    const activeToken = authToken || (await authStorage.getAccessToken());
+    if (!activeToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    const updatedProfile = await profileApi.updateProfile(activeToken, profileId, profile);
     setProfiles((current) => {
       const childIndex = current
         .filter((item) => item.role === 'child')
@@ -190,8 +265,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteProfile = async (profileId: string) => {
-    if (!authToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-    await profileApi.deleteProfile(authToken, profileId);
+    const activeToken = authToken || (await authStorage.getAccessToken());
+    if (!activeToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    await profileApi.deleteProfile(activeToken, profileId);
     const remainingChildren = profiles.filter(
       (item) => item.role === 'child' && item.id !== profileId
     );
@@ -211,6 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profiles,
         loadingProfiles,
         profilesError,
+        isRestoring,
         login,
         selectProfile,
         signOut,

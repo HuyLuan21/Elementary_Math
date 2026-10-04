@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { authApi, UserData } from "../services/authApi";
 
 interface LoginScreenProps {
-  onLoginSuccess: (email: string, user?: UserData, token?: string) => void;
+  onLoginSuccess: (email: string, user?: UserData, token?: string, refreshToken?: string) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
@@ -49,9 +49,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       setIsLoading(false);
 
       if (res.data) {
-        onLoginSuccess(res.data.email || email, res.data, res.access_token);
+        onLoginSuccess(res.data.email || email, res.data, res.access_token, res.refresh_token);
       } else {
-        onLoginSuccess(email, undefined, res.access_token);
+        onLoginSuccess(email, undefined, res.access_token, res.refresh_token);
       }
     } catch (err: unknown) {
       setIsLoading(false);

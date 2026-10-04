@@ -1,6 +1,6 @@
-import { apiClient, getApiBaseUrl, setAuthToken } from "./axios";
+import { apiClient, getApiBaseUrl, setAuthToken, onAuthFailure } from "./axios";
 
-export { getApiBaseUrl, setAuthToken };
+export { getApiBaseUrl, setAuthToken, onAuthFailure };
 
 export interface UserData {
   id: string;
@@ -23,6 +23,11 @@ export interface LoginResponse {
     auth_challenge_id?: string;
   };
   message?: string;
+}
+
+export interface RefreshTokenResponse {
+  access_token: string;
+  refresh_token: string;
 }
 
 export interface LoginParams {
@@ -49,7 +54,7 @@ export interface PinVerifyResponse {
 }
 
 export const authApi = {
-  // Login with Email & Password
+  // Đăng nhập bằng Email & Mật khẩu
   login: async ({ email, password }: LoginParams): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>("/auth/login", {
       email: email.trim(),
@@ -58,7 +63,7 @@ export const authApi = {
     return response.data;
   },
 
-  // Register new account
+  // Đăng ký tài khoản phụ huynh mới
   register: async ({
     full_name,
     email,
@@ -72,7 +77,17 @@ export const authApi = {
     return response.data;
   },
 
-  // Set the authenticated user's parent PIN
+  // Làm mới Access Token thông qua Refresh Token
+  refreshToken: async (token: string): Promise<RefreshTokenResponse> => {
+    const response = await apiClient.post<RefreshTokenResponse>(
+      "/auth/refresh",
+      { refresh_token: token },
+      { headers: { "x-refresh-token": token } }
+    );
+    return response.data;
+  },
+
+  // Thiết lập mã PIN phụ huynh
   setPin: async (pin: string): Promise<PinSetupResponse> => {
     const response = await apiClient.post<PinSetupResponse>("/auth/pin/setup", {
       pin,
@@ -80,7 +95,7 @@ export const authApi = {
     return response.data;
   },
 
-  // Verify the authenticated user's parent PIN
+  // Xác thực mã PIN phụ huynh
   verifyPin: async (pin: string): Promise<boolean> => {
     const response = await apiClient.post<PinVerifyResponse>("/auth/pin/verify", {
       pin,
@@ -88,7 +103,7 @@ export const authApi = {
     return response.data.data.verified;
   },
 
-  // Get current authenticated user
+  // Lấy thông tin tài khoản hiện tại từ backend (/auth/me)
   getMe: async (token?: string): Promise<UserData> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await apiClient.get<{ data: UserData }>("/auth/me", {
@@ -97,14 +112,14 @@ export const authApi = {
     return response.data.data;
   },
 
-  // Logout
+  // Đăng xuất và vô hiệu hóa token trên backend
   logout: async (token?: string, refreshToken?: string): Promise<void> => {
     try {
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       await apiClient.post(
         "/auth/logout",
         { access_token: token, refresh_token: refreshToken },
-        { headers },
+        { headers }
       );
     } catch (e) {
       console.warn("Logout API error:", e);

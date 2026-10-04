@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as Speech from "expo-speech";
 import {
   Award,
@@ -29,175 +29,153 @@ import {
 } from "lucide-react-native";
 
 import { useAuth } from "../../src/context/AuthContext";
-import { achievementApi } from "../../src/services/achievementApi";
-import {
-  BadgeAchievement,
-  ProfileAchievements,
-  StickerAchievement,
-} from "../../src/types/achievement";
+import { emathApi, KidCornerData, KidCornerBadge, KidCornerSticker } from "../../src/services/emathApi";
+import { storage } from "../../src/utils/storage";
 import { ParentPinModal } from "../../src/components/ParentPinModal";
 
 const { width } = Dimensions.get("window");
 
-const DEFAULT_BADGES = [
-  {
-    id: "badge-1",
-    code: "COUNT_KING",
-    name: "Vua Đếm Số",
-    description: "Đếm đúng 50 bài toán",
-    tag: "⭐ Cực đỉnh",
-    status: "earned" as const,
-    emoji: "👑",
-    color: "#FFDF9B",
-  },
-  {
-    id: "badge-2",
-    code: "EXPLORER",
-    name: "Nhà Thám Hiểm",
-    description: "Vượt qua Chặng 1",
-    tag: "🏆 Tuyệt vời",
-    status: "earned" as const,
-    emoji: "🧭",
-    color: "#C6E7FF",
-  },
-  {
-    id: "badge-3",
-    code: "HARD_WORKING",
-    name: "Bé Chăm Chỉ",
-    description: "Học 5 ngày liên tiếp",
-    tag: "🔥 Xuất sắc",
-    status: "earned" as const,
-    emoji: "🐝",
-    color: "#FFDF9B",
-  },
-  {
-    id: "badge-4",
-    code: "OWL_GENIUS",
-    name: "Cú Vọ Tinh Anh",
-    description: "Giải đúng 3 bài đố vui",
-    tag: "Tiến độ 2/3",
-    status: "in_progress" as const,
-    progress: 0.66,
-    emoji: "🦉",
-    color: "#EEE4FF",
-  },
-  {
-    id: "badge-5",
-    code: "GEOMETRY_MASTER",
-    name: "Nhà Hình Học",
-    description: "Mở khóa ở Chặng 2",
-    tag: "Chặng 2",
-    status: "locked" as const,
-    emoji: "📐",
-    color: "#E9DDFF",
-  },
-  {
-    id: "badge-6",
-    code: "COMPARE_CHAMP",
-    name: "Vua So Sánh",
-    description: "Mở khóa ở Chặng 3",
-    tag: "Chặng 3",
-    status: "locked" as const,
-    emoji: "⚖️",
-    color: "#E9DDFF",
-  },
-];
+const BADGE_META: Record<string, { emoji: string; color: string }> = {
+  FIRST_LESSON: { emoji: "🥇", color: "#FFDF9B" },
+  COLOR_MASTER: { emoji: "🎨", color: "#C6E7FF" },
+  SHAPE_MASTER: { emoji: "📐", color: "#E9DDFF" },
+  NUMBER_MASTER: { emoji: "🔢", color: "#FFDF9B" },
+  COMPARE_MASTER: { emoji: "⚖️", color: "#C6E7FF" },
+  TIME_MASTER: { emoji: "⏰", color: "#E9DDFF" },
+  STREAK_7_DAYS: { emoji: "🔥", color: "#FFDF9B" },
+  TEN_LESSONS: { emoji: "🌟", color: "#FFD167" },
+};
 
-const DEFAULT_STICKERS = [
-  {
-    id: "st-1",
-    name: "Thỏ Trắng",
-    emoji: "🐰",
-    tag: "Tai dài",
-    bg: "#FDF2F8",
-    color: "#AE2F34",
-    soundText: "Thỏ trắng nhảy nhót tung tăng!",
-  },
-  {
-    id: "st-2",
-    name: "Cáo Nhỏ",
-    emoji: "🦊",
-    tag: "Nhanh nhẹn",
-    bg: "#FFF7ED",
-    color: "#785A00",
-    soundText: "Cáo nhỏ thông minh và đáng yêu!",
-  },
-  {
-    id: "st-3",
-    name: "Gà Con",
-    emoji: "🐥",
-    tag: "Chíp chíp",
-    bg: "#FEFCE8",
-    color: "#765900",
-    soundText: "Gà con chíp chíp chào buổi sáng!",
-  },
-  {
-    id: "st-4",
-    name: "Cún Vàng",
-    emoji: "🐶",
-    tag: "Gâu gâu",
-    bg: "#FFFBEB",
-    color: "#00658D",
-    soundText: "Cún vàng vẫy đuôi chúc mừng bé!",
-  },
-  {
-    id: "st-5",
-    name: "Chuột Tí Hon",
-    emoji: "🐭",
-    tag: "Chít chít",
-    bg: "#FAF5FF",
-    color: "#6F7880",
-    soundText: "Chuột tí hon lanh lợi xin chào!",
-  },
-];
+const STICKER_EMOJI_MAP: Record<string, { emoji: string; bg: string; color: string }> = {
+  STICKER_RED: { emoji: "🐱", bg: "#FDF2F8", color: "#AE2F34" },
+  STICKER_BLUE: { emoji: "🐟", bg: "#F0F9FF", color: "#00658D" },
+  STICKER_YELLOW: { emoji: "🐥", bg: "#FEFCE8", color: "#765900" },
+  STICKER_GREEN: { emoji: "🐸", bg: "#F0FDF4", color: "#15803D" },
+  STICKER_MIXED_COLORS: { emoji: "🌈", bg: "#FAF5FF", color: "#6B21A8" },
+  STICKER_CIRCLE: { emoji: "🐻", bg: "#FFF7ED", color: "#785A00" },
+  STICKER_SQUARE: { emoji: "🐼", bg: "#F3F4F6", color: "#374151" },
+  STICKER_TRIANGLE: { emoji: "🐠", bg: "#ECFEFF", color: "#0E7490" },
+  STICKER_RECTANGLE: { emoji: "🦌", bg: "#FFFBEB", color: "#92400E" },
+  STICKER_SHAPES: { emoji: "✨", bg: "#FAF5FF", color: "#6B21A8" },
+  STICKER_ONE: { emoji: "🐝", bg: "#FFFBEB", color: "#D97706" },
+  STICKER_TWO: { emoji: "🦆", bg: "#FEFCE8", color: "#CA8A04" },
+  STICKER_THREE: { emoji: "🐱", bg: "#FDF2F8", color: "#DB2777" },
+  STICKER_FOUR: { emoji: "🐠", bg: "#ECFEFF", color: "#0891B2" },
+  STICKER_COUNTING: { emoji: "⭐", bg: "#FFF7ED", color: "#EA580C" },
+};
 
 export default function AchievementsRoute() {
   const router = useRouter();
-  const { activeProfile, signOut } = useAuth();
+  const { activeProfile, authToken, signOut } = useAuth();
   const [pinModalVisible, setPinModalVisible] = useState(false);
-  const [achievements, setAchievements] = useState<ProfileAchievements | null>(null);
+  const [kidCornerData, setKidCornerData] = useState<KidCornerData | null>(null);
   const [loading, setLoading] = useState(false);
 
   const profile = activeProfile || {
-    id: "kid-1",
-    name: "Bé Na",
+    id: "",
+    name: "Bé",
     role: "child" as const,
     grade: "Lớp 1",
     avatarColor: "#FFDF9B",
     avatarIcon: "🦁",
-    totalStars: 14,
+    totalStars: 0,
   };
 
   const isParent = profile.role === "parent";
 
-  useEffect(() => {
-    if (!profile.id) return;
-    let isCurrent = true;
+  const loadKidCornerData = useCallback(async () => {
+    let currentProfileId = activeProfile?.id;
+    if (!currentProfileId) {
+      try {
+        const storedProfile = await storage.getItem("emath_active_profile");
+        if (storedProfile) {
+          const parsed = JSON.parse(storedProfile);
+          currentProfileId = parsed?.id;
+        }
+      } catch (e) {}
+    }
+
+    if (!currentProfileId) return;
+
+    let currentToken = authToken;
+    if (!currentToken) {
+      try {
+        currentToken = await storage.getItem("emath_auth_token");
+      } catch (e) {}
+    }
+
     setLoading(true);
+    try {
+      const data = await emathApi.getKidCorner(currentProfileId, currentToken || undefined);
+      if (data) {
+        setKidCornerData(data);
+      }
+    } catch (e) {
+      console.warn("Lỗi tải Góc của bé:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeProfile?.id, authToken]);
 
-    achievementApi
-      .getProfileAchievements(profile.id)
-      .then((data) => {
-        if (isCurrent) setAchievements(data);
-      })
-      .catch(() => {
-        // Fallback default rich achievements
-      })
-      .finally(() => {
-        if (isCurrent) setLoading(false);
-      });
+  useFocusEffect(
+    useCallback(() => {
+      loadKidCornerData();
+    }, [loadKidCornerData])
+  );
 
-    return () => {
-      isCurrent = false;
-    };
-  }, [profile.id]);
+  const totalStars = kidCornerData?.stats?.totalStars ?? (activeProfile?.totalStars ?? 0);
+  const earnedBadgesCount = kidCornerData?.stats?.totalBadgesEarned ?? 0;
+  const totalBadgesCount = kidCornerData?.stats?.totalBadgesCount || (kidCornerData?.badges?.length ?? 8);
+  const stickersCount = kidCornerData?.stats?.totalStickersCollected ?? 0;
+  const totalStickersCount = kidCornerData?.stats?.totalStickersCount || (kidCornerData?.stickers?.length ?? 5);
+
+  const displayedBadges =
+    kidCornerData?.badges && kidCornerData.badges.length > 0
+      ? kidCornerData.badges.map((b) => ({
+          id: b.id,
+          code: b.code,
+          name: b.title,
+          description: b.desc,
+          tag: b.status === "achieved" ? "Hoàn thành 🏆" : "Chưa đạt 🔒",
+          status: b.status === "achieved" ? ("earned" as const) : ("locked" as const),
+          emoji: BADGE_META[b.code]?.emoji || "🏅",
+          color: BADGE_META[b.code]?.color || "#FFDF9B",
+        }))
+      : [];
+
+  const displayedStickers =
+    kidCornerData?.stickers && kidCornerData.stickers.length > 0
+      ? kidCornerData.stickers.map((s) => ({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          desc: s.desc,
+          isUnlocked: s.isUnlocked,
+          emoji: STICKER_EMOJI_MAP[s.code]?.emoji || "🐾",
+          bg: s.isUnlocked
+            ? STICKER_EMOJI_MAP[s.code]?.bg || "#FEFCE8"
+            : "#F3F4F6",
+          color: s.isUnlocked
+            ? STICKER_EMOJI_MAP[s.code]?.color || "#765900"
+            : "#94A3B8",
+          tag: s.isUnlocked ? "Bạn nhỏ" : "Đang khóa 🔒",
+          soundText: s.isUnlocked
+            ? `${s.name} xin chào bé! ${s.desc || ""}`
+            : `Bạn nhỏ ${s.name} đang bị khóa. Bé hãy hoàn thành bài học để mở khóa nhé!`,
+        }))
+      : [];
 
   const speakGreeting = (customMessage?: string) => {
-    const message =
-      customMessage ||
-      (isParent
-        ? `Xin chào Phụ huynh ${profile.name}. Báo cáo học tập của bé đã sẵn sàng.`
-        : `${profile.name} ơi! Cùng ngắm những huy hiệu lấp lánh bé đã thu thập được nhé!`);
+    let message = customMessage;
+    if (!message) {
+      if (isParent) {
+        message = `Xin chào Phụ huynh ${profile.name}. Báo cáo học tập của bé đã sẵn sàng.`;
+      } else if (earnedBadgesCount === 0) {
+        message = `${profile.name} ơi! Hãy làm bài học đầu tiên để thu thập những huy hiệu và bạn nhỏ đầu tiên nhé!`;
+      } else {
+        message = `${profile.name} ơi! Bé đã đạt ${earnedBadgesCount} huy hiệu xuất sắc. Cùng tiếp tục cố gắng nhé!`;
+      }
+    }
 
     Speech.speak(message, {
       language: "vi-VN",
@@ -213,10 +191,6 @@ export default function AchievementsRoute() {
       router.replace("/profiles");
     }
   };
-
-  const totalStars = profile.totalStars || 14;
-  const earnedBadgesCount = achievements?.summary.badge_count || 3;
-  const stickersCount = achievements?.summary.sticker_count || DEFAULT_STICKERS.length;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
@@ -381,16 +355,15 @@ export default function AchievementsRoute() {
             </View>
             <View style={[styles.countPill, { backgroundColor: "#C6E7FF" }]}>
               <Text style={[styles.countPillText, { color: "#00658D" }]}>
-                {earnedBadgesCount}/6 đã đạt
+                {earnedBadgesCount}/{totalBadgesCount} đã đạt
               </Text>
             </View>
           </View>
 
           {/* 2-Column Grid of 3D Badges */}
           <View style={styles.badgesGrid}>
-            {DEFAULT_BADGES.map((badge) => {
+            {displayedBadges.map((badge) => {
               const isEarned = badge.status === "earned";
-              const isInProgress = badge.status === "in_progress";
               const isLocked = badge.status === "locked";
 
               return (
@@ -442,20 +415,6 @@ export default function AchievementsRoute() {
                     {badge.description}
                   </Text>
 
-                  {/* Progress Bar for in-progress badge */}
-                  {isInProgress && (
-                    <View style={styles.progressBarWrapper}>
-                      <View style={styles.progressBarTrack}>
-                        <View
-                          style={[
-                            styles.progressBarFill,
-                            { width: `${(badge.progress || 0.5) * 100}%` },
-                          ]}
-                        />
-                      </View>
-                    </View>
-                  )}
-
                   {/* Badge Tag */}
                   <View
                     style={[
@@ -491,7 +450,7 @@ export default function AchievementsRoute() {
             </View>
             <View style={[styles.countPill, { backgroundColor: "#FFDAD8" }]}>
               <Text style={[styles.countPillText, { color: "#AE2F34" }]}>
-                {DEFAULT_STICKERS.length} bạn
+                {stickersCount}/{totalStickersCount} bạn
               </Text>
             </View>
           </View>
@@ -506,10 +465,13 @@ export default function AchievementsRoute() {
 
           {/* 3-Column Grid of Chubby Animal Sticker Cards (Max 3 items per row) */}
           <View style={styles.stickersGrid}>
-            {DEFAULT_STICKERS.map((sticker) => (
+            {displayedStickers.map((sticker) => (
               <TouchableOpacity
                 key={sticker.id}
-                style={styles.stickerCard3D}
+                style={[
+                  styles.stickerCard3D,
+                  !sticker.isUnlocked && { opacity: 0.65, backgroundColor: "#F8FAFC" },
+                ]}
                 activeOpacity={0.85}
                 onPress={() => speakGreeting(sticker.soundText)}
               >
@@ -519,7 +481,9 @@ export default function AchievementsRoute() {
                     { backgroundColor: sticker.bg },
                   ]}
                 >
-                  <Text style={styles.stickerAvatarEmoji}>{sticker.emoji}</Text>
+                  <Text style={styles.stickerAvatarEmoji}>
+                    {sticker.isUnlocked ? sticker.emoji : "🔒"}
+                  </Text>
                 </View>
 
                 <Text style={styles.stickerNameText} numberOfLines={1}>

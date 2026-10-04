@@ -1,14 +1,31 @@
-import React from "react";
-import { Stack } from "expo-router";
-import { AuthProvider } from "../src/context/AuthContext";
+import React, { useEffect } from "react";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { StatusBar } from "expo-status-bar";
 import { ParentPinModal } from "../src/components/ParentPinModal";
-import { useAuth } from "../src/context/AuthContext";
 import { authApi } from "../src/services/authApi";
 
 function AppNavigator() {
-  const { currentUser, updateCurrentUser } = useAuth();
+  const { currentUser, authToken, isRestoring, updateCurrentUser } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
   const setupPinRequired = currentUser?.pin_enabled === false;
+
+  // Protected Route Guard: Tự động đá về trang Đăng nhập khi không có authToken
+  useEffect(() => {
+    if (isRestoring) return;
+
+    const firstSegment = segments[0] as string | undefined;
+    const inProtectedArea =
+      firstSegment === "(tabs)" ||
+      firstSegment === "profiles" ||
+      firstSegment === "lesson";
+
+    if (!authToken && inProtectedArea) {
+      router.replace("/");
+    }
+  }, [authToken, isRestoring, segments, router]);
 
   const handlePinSetupSuccess = () => {
     if (currentUser) {

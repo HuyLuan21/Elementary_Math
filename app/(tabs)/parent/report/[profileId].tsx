@@ -132,6 +132,7 @@ export default function ChildReportRoute() {
           <>
             <ChildProfileCard report={report} />
             <SummarySection summary={report.summary} />
+            <ParentAdviceSection report={report} />
             <ReportSection title="📚 Các chặng học">
               {report.chapters.length ? (
                 report.chapters.map((chapter) => (
@@ -283,6 +284,64 @@ function SummarySection({
           : "Bé chưa có hoạt động học gần đây"}
       </Text>
     </>
+  );
+}
+
+function ParentAdviceSection({ report }: { report: ChildReport }) {
+  const completedCount = report.summary.completed_lessons;
+  const totalStars = report.summary.total_stars;
+  const name = report.profile.display_name || "Bé";
+
+  const adviceList: Array<{ icon: string; title: string; desc: string }> = [];
+
+  if (completedCount === 0) {
+    adviceList.push({
+      icon: "🌱",
+      title: "Bắt đầu hành trình cùng bé",
+      desc: `${name} đang ở vạch xuất phát. Ba mẹ hãy dành 10-15 phút mỗi tối ngồi cùng bé để khuyến khích sự tò mò và tạo hứng thú học tập nhé!`,
+    });
+  } else if (completedCount < 5) {
+    adviceList.push({
+      icon: "🌟",
+      title: "Xây dựng thói quen hàng ngày",
+      desc: `${name} đã hoàn thành ${completedCount} bài học rất tốt! Ba mẹ hãy duy trì thói quen học 1 bài mỗi ngày và khen thưởng bé bằng những lời động viên tích cực.`,
+    });
+  } else {
+    adviceList.push({
+      icon: "🏆",
+      title: "Tiến bộ vượt bậc",
+      desc: `${name} đã hoàn thành ${completedCount} bài học và thu thập được ${totalStars} ⭐! Ba mẹ có thể mở rộng bài học bằng cách đố bé đếm và so sánh đồ vật thực tế trong nhà.`,
+    });
+  }
+
+  adviceList.push({
+    icon: "⏱️",
+    title: "Thời lượng học lý tưởng",
+    desc: "Thời gian vàng cho bé mầm non là 15-20 phút/ngày. Tránh để bé nhìn màn hình quá lâu để bảo vệ mắt và giữ cho não bộ luôn thư giãn.",
+  });
+
+  adviceList.push({
+    icon: "💬",
+    title: "Tương tác thực tế",
+    desc: "Khi cùng bé học các bài hình học và màu sắc, ba mẹ hãy hỏi bé: 'Quả dưa hấu hình gì?', 'Chiếc áo này màu gì?' để tăng khả năng quan sát.",
+  });
+
+  return (
+    <View style={styles.adviceContainer}>
+      <View style={styles.adviceHeaderRow}>
+        <Text style={styles.adviceSectionEmoji}>💡</Text>
+        <Text style={styles.adviceSectionTitle}>Lời khuyên cho Ba Mẹ</Text>
+      </View>
+      {adviceList.map((item, idx) => (
+        <View key={idx} style={styles.adviceCard}>
+          <Text style={styles.adviceIcon}>{item.icon}</Text>
+          <View style={styles.adviceTextGroup}>
+            <Text style={styles.adviceTitle}>{item.title}</Text>
+            <Text style={styles.adviceDesc}>{item.desc}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -752,5 +811,54 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     marginLeft: 8,
+  },
+  adviceContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#F0E4C3",
+  },
+  adviceHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  adviceSectionEmoji: {
+    fontSize: 20,
+    marginRight: 6,
+  },
+  adviceSectionTitle: {
+    color: "#303942",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  adviceCard: {
+    flexDirection: "row",
+    backgroundColor: "#FFFBF0",
+    borderRadius: 13,
+    padding: 11,
+    marginBottom: 8,
+    alignItems: "flex-start",
+  },
+  adviceIcon: {
+    fontSize: 20,
+    marginRight: 10,
+    marginTop: 1,
+  },
+  adviceTextGroup: {
+    flex: 1,
+  },
+  adviceTitle: {
+    color: "#37414B",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  adviceDesc: {
+    color: "#68737D",
+    fontSize: 11.5,
+    lineHeight: 16,
   },
 });

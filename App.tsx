@@ -53,7 +53,7 @@ export default function App() {
 
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  const handleLoginSuccess = (email: string, user?: UserData, token?: string) => {
+  const handleLoginSuccess = (email: string, user?: UserData, token?: string, _refreshToken?: string) => {
     setUserEmail(email);
     if (token) {
       setAuthToken(token);

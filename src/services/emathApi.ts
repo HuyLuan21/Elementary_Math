@@ -126,11 +126,15 @@ export const emathApi = {
   getLessonQuestions: async (
     lessonId: string,
     token?: string,
+    profileId?: string,
   ): Promise<LessonDetailData> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     const response = await apiClient.get<{ data: LessonDetailData }>(
       `/emath/lessons/${lessonId}/questions`,
-      { headers },
+      {
+        headers,
+        params: profileId ? { profile_id: profileId } : undefined,
+      },
     );
     return response.data?.data;
   },
