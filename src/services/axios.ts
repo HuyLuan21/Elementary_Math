@@ -17,6 +17,7 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
+  withCredentials: true,
 });
 
 // Listener thông báo khi refresh token thất bại (để AuthContext xóa state và điều hướng về Login)
@@ -115,6 +116,7 @@ const executeTokenRefresh = async (): Promise<{
         'Content-Type': 'application/json',
         'x-refresh-token': currentRefreshToken,
       },
+      withCredentials: true,
       timeout: 10000,
     }
   );

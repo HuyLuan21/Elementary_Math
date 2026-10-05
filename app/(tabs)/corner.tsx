@@ -50,6 +50,34 @@ const BADGE_META: Record<string, { emoji: string; color: string }> = {
   TEN_LESSONS: { emoji: "🌟", color: "#FFD167" },
 };
 
+const STICKER_META: Record<string, { emoji: string; color: string }> = {
+  STICKER_RED: { emoji: "🐱", color: "#FFDAD8" },
+  STICKER_BLUE: { emoji: "🐟", color: "#C6E7FF" },
+  STICKER_YELLOW: { emoji: "🦆", color: "#FFDF9B" },
+  STICKER_GREEN: { emoji: "🐸", color: "#D1FAE5" },
+  STICKER_MIXED_COLORS: { emoji: "🌈", color: "#E9DDFF" },
+  STICKER_CIRCLE: { emoji: "🐻", color: "#FFDF9B" },
+  STICKER_SQUARE: { emoji: "🐼", color: "#E2E8F0" },
+  STICKER_TRIANGLE: { emoji: "🐠", color: "#C6E7FF" },
+  STICKER_RECTANGLE: { emoji: "🦒", color: "#FEF3C7" },
+  STICKER_SHAPES: { emoji: "📐", color: "#E9DDFF" },
+  STICKER_ONE: { emoji: "🐝", color: "#FEF08A" },
+  STICKER_TWO: { emoji: "🐥", color: "#FFDF9B" },
+  STICKER_THREE: { emoji: "🐱", color: "#FFDAD8" },
+  STICKER_FOUR: { emoji: "🐬", color: "#C6E7FF" },
+  STICKER_COUNTING: { emoji: "🔢", color: "#E9DDFF" },
+  STICKER_MORE: { emoji: "🐘", color: "#C6E7FF" },
+  STICKER_LESS: { emoji: "🐰", color: "#FFDAD8" },
+  STICKER_EQUAL: { emoji: "🐿️", color: "#FEF3C7" },
+  STICKER_BIG_SMALL: { emoji: "🐻‍❄️", color: "#E2E8F0" },
+  STICKER_COMPARE: { emoji: "⚖️", color: "#E9DDFF" },
+  STICKER_MORNING: { emoji: "🌅", color: "#FFDF9B" },
+  STICKER_NOON: { emoji: "☀️", color: "#FDE047" },
+  STICKER_NIGHT: { emoji: "🌙", color: "#E0E7FF" },
+  STICKER_ROUTINE: { emoji: "🐨", color: "#E2E8F0" },
+  STICKER_TIME: { emoji: "⏰", color: "#FFD167" },
+};
+
 export default function AchievementsRoute() {
   const router = useRouter();
   const { activeProfile, authToken, signOut } = useAuth();
@@ -120,6 +148,13 @@ export default function AchievementsRoute() {
     kidCornerData?.stats?.totalBadgesCount ||
     (kidCornerData?.badges?.length ?? 8);
 
+  const collectedStickersCount =
+    kidCornerData?.stats?.totalStickersCollected ??
+    (kidCornerData?.stickers?.filter((s) => s.isUnlocked).length ?? 0);
+  const totalStickersCount =
+    kidCornerData?.stats?.totalStickersCount ||
+    (kidCornerData?.stickers?.length ?? 25);
+
   const displayedBadges =
     kidCornerData?.badges && kidCornerData.badges.length > 0
       ? kidCornerData.badges.map((b) => ({
@@ -132,6 +167,19 @@ export default function AchievementsRoute() {
             b.status === "achieved" ? ("earned" as const) : ("locked" as const),
           emoji: BADGE_META[b.code]?.emoji || "🏅",
           color: BADGE_META[b.code]?.color || "#FFDF9B",
+        }))
+      : [];
+
+  const displayedStickers =
+    kidCornerData?.stickers && kidCornerData.stickers.length > 0
+      ? kidCornerData.stickers.map((s) => ({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          desc: s.desc,
+          isUnlocked: s.isUnlocked,
+          emoji: STICKER_META[s.code]?.emoji || "🎁",
+          color: STICKER_META[s.code]?.color || "#FFDF9B",
         }))
       : [];
 
@@ -279,20 +327,31 @@ export default function AchievementsRoute() {
             <View
               style={[styles.statTokenIconWrap, { backgroundColor: "#FFDF9B" }]}
             >
-              <Trophy size={20} color="#251A00" />
+              <Trophy size={18} color="#251A00" />
             </View>
-            <Text style={styles.statTokenLabel}>Huy hiệu đã đạt</Text>
+            <Text style={styles.statTokenLabel}>Huy hiệu</Text>
             <Text style={styles.statTokenNumber}>{earnedBadgesCount}</Text>
           </View>
 
-          {/* Token 2: Stars */}
+          {/* Token 2: Stickers */}
+          <View style={styles.statTokenCard}>
+            <View
+              style={[styles.statTokenIconWrap, { backgroundColor: "#C6E7FF" }]}
+            >
+              <Sparkles size={18} color="#00658D" />
+            </View>
+            <Text style={styles.statTokenLabel}>Hình dán</Text>
+            <Text style={styles.statTokenNumber}>{collectedStickersCount}</Text>
+          </View>
+
+          {/* Token 3: Stars */}
           <View style={styles.statTokenCard}>
             <View
               style={[styles.statTokenIconWrap, { backgroundColor: "#FFD167" }]}
             >
-              <Star size={20} color="#765900" fill="#765900" />
+              <Star size={18} color="#765900" fill="#765900" />
             </View>
-            <Text style={styles.statTokenLabel}>Tổng ngôi sao</Text>
+            <Text style={styles.statTokenLabel}>Ngôi sao</Text>
             <Text style={styles.statTokenNumber}>{totalStars}</Text>
           </View>
         </View>
@@ -389,6 +448,95 @@ export default function AchievementsRoute() {
                       ]}
                     >
                       {badge.tag}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* SECTION 4: STICKERS COLLECTION */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeadingRow}>
+            <View style={styles.headingLeftGroup}>
+              <View
+                style={[
+                  styles.headingIndicator,
+                  { backgroundColor: "#FF7372" },
+                ]}
+              />
+              <Text style={styles.sectionMainTitle}>Bộ sưu tập hình dán</Text>
+            </View>
+            <View style={[styles.countPill, { backgroundColor: "#FFDF9B" }]}>
+              <Text style={[styles.countPillText, { color: "#785A00" }]}>
+                {collectedStickersCount}/{totalStickersCount} đã sưu tập
+              </Text>
+            </View>
+          </View>
+
+          {/* Grid of 3D Stickers */}
+          <View style={styles.stickersGrid}>
+            {displayedStickers.map((sticker) => {
+              const isUnlocked = sticker.isUnlocked;
+
+              return (
+                <View
+                  key={sticker.id}
+                  style={[
+                    styles.stickerCard3D,
+                    !isUnlocked && styles.badgeCardLocked,
+                  ]}
+                >
+                  {/* Avatar Wrap */}
+                  <View
+                    style={[
+                      styles.stickerAvatarWrap,
+                      {
+                        backgroundColor: isUnlocked
+                          ? sticker.color
+                          : "#E9DDFF",
+                      },
+                    ]}
+                  >
+                    {isUnlocked ? (
+                      <Text style={styles.stickerAvatarEmoji}>
+                        {sticker.emoji}
+                      </Text>
+                    ) : (
+                      <Lock size={20} color="#6F7880" />
+                    )}
+                  </View>
+
+                  {/* Sticker Name */}
+                  <Text
+                    style={[
+                      styles.stickerNameText,
+                      !isUnlocked && styles.badgeTitleLocked,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {sticker.name}
+                  </Text>
+
+                  {/* Tag */}
+                  <View
+                    style={[
+                      styles.stickerTagBadge,
+                      {
+                        backgroundColor: isUnlocked
+                          ? "#D1FAE5"
+                          : "#F3EAFF",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.stickerTagText,
+                        { color: isUnlocked ? "#065F46" : "#6F7880" },
+                      ]}
+                    >
+                      {isUnlocked ? "Đã nhận ✨" : "Chưa mở 🔒"}
                     </Text>
                   </View>
                 </View>

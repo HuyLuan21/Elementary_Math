@@ -27,7 +27,14 @@ export interface JourneyChapter {
 
 export interface QuestionData {
   id: string;
-  type: "count" | "equation" | "compare";
+  type:
+    | "count"
+    | "equation"
+    | "compare"
+    | "color_choice"
+    | "shape_choice"
+    | "time"
+    | "image_choice";
   questionText: string;
   visualItems?: string[];
   visualFormula?: {
@@ -35,8 +42,20 @@ export interface QuestionData {
     operator: string;
     rightItems: string[];
   };
-  compareLeft?: { count: number; icon: string; label: string };
-  compareRight?: { count: number; icon: string; label: string };
+  compareLeft?: { count: number; icon: string; label: string; items?: string[] };
+  compareRight?: { count: number; icon: string; label: string; items?: string[] };
+  numberedCards?: Array<{
+    index: number;
+    label?: string;
+    color?: string;
+    name?: string;
+    shape?: "circle" | "square" | "triangle" | "rectangle";
+    emoji?: string;
+  }>;
+  clockTime?: {
+    hour: number;
+    minute: number;
+  };
   options: {
     id: string;
     label: string;
@@ -62,6 +81,14 @@ export interface SubmitLessonResult {
   totalStars: number;
   correctCount: number;
   totalQuestions: number;
+  awardedSticker?: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    image_url: string | null;
+    isNew: boolean;
+  } | null;
 }
 
 export interface KidCornerBadge {
