@@ -335,6 +335,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     color: '#111827',
     fontSize: 15,
+    outlineStyle: 'none' as any,
   },
   btnRow: {
     flexDirection: 'row',

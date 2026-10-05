@@ -703,6 +703,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 10,
     paddingVertical: 0,
+    outlineStyle: "none" as any,
   },
 
   eyeButton: {

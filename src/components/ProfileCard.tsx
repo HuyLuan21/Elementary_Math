@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Check, Pencil, Star } from 'lucide-react-native';
 import { UserProfile } from '../types/auth';
 
@@ -19,6 +19,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   onEdit,
 }) => {
   const age = getAge(profile.birthDate);
+  const isImg =
+    typeof profile.avatarIcon === 'string' &&
+    (profile.avatarIcon.startsWith('http') ||
+      profile.avatarIcon.startsWith('/') ||
+      profile.avatarIcon.startsWith('data:') ||
+      /\.(png|jpg|jpeg|svg|webp)$/i.test(profile.avatarIcon));
 
   return (
     <View
@@ -38,7 +44,15 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       >
         <View style={styles.cardTopRow}>
           <View style={[styles.avatarBox, { backgroundColor: profile.avatarColor }]}>
-            <Text style={styles.avatarEmoji}>{profile.avatarIcon}</Text>
+            {isImg ? (
+              <Image
+                source={{ uri: profile.avatarIcon }}
+                style={styles.avatarImg}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.avatarEmoji}>{profile.avatarIcon || '👶'}</Text>
+            )}
             {isSelected && (
               <View style={styles.selectedMark}>
                 <Check size={13} color="#FFFFFF" strokeWidth={3} />
@@ -133,6 +147,12 @@ const styles = StyleSheet.create({
     borderRadius: 38,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
   },
   avatarEmoji: {
     fontSize: 40,

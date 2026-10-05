@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Check, KeyRound, Lock, ShieldCheck, X } from 'lucide-react-native';
 import { authApi } from '../services/authApi';
+import { PinCodeInput } from './PinCodeInput';
 
 export type ParentPinModalMode = 'setup' | 'verify' | 'change';
 
@@ -283,142 +284,49 @@ export const ParentPinModal: React.FC<ParentPinModalProps> = ({
 
             {/* Change Mode: Old PIN */}
             {isChangeMode && (
-              <>
-                <Text style={styles.inputLabel}>Mã PIN hiện tại</Text>
-                <Pressable
-                  style={styles.pinBoxesContainer}
-                  onPress={() => {
-                    setFocusedField('old');
-                    oldPinInputRef.current?.focus();
-                  }}
-                >
-                  {[0, 1, 2, 3].map((index) => {
-                    const digit = oldPin[index];
-                    const isFocused = focusedField === 'old' && oldPin.length === index;
-                    return (
-                      <View
-                        key={index}
-                        style={[
-                          styles.pinBox,
-                          digit !== undefined && styles.pinBoxFilled,
-                          isFocused && styles.pinBoxActive,
-                        ]}
-                      >
-                        {digit !== undefined ? (
-                          <View style={styles.pinDot} />
-                        ) : null}
-                      </View>
-                    );
-                  })}
-                </Pressable>
-
-                <TextInput
-                  ref={oldPinInputRef}
-                  style={styles.hiddenInput}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  secureTextEntry
-                  value={oldPin}
-                  onChangeText={handleOldPinChange}
-                  onFocus={() => setFocusedField('old')}
-                  autoFocus
-                  editable={!isLoading}
-                  caretHidden
-                />
-              </>
+              <PinCodeInput
+                ref={oldPinInputRef}
+                label="Mã PIN hiện tại"
+                value={oldPin}
+                onChangeText={handleOldPinChange}
+                onFocus={() => setFocusedField('old')}
+                isFocused={focusedField === 'old'}
+                autoFocus
+                disabled={isLoading}
+              />
             )}
 
             {/* PIN Input (New PIN or Single PIN) */}
-            {(isSetupMode || isChangeMode) && (
-              <Text style={[styles.inputLabel, { marginTop: isChangeMode ? 14 : 0 }]}>
-                {isChangeMode ? 'Mã PIN mới (4 số)' : 'Mã PIN mới'}
-              </Text>
-            )}
-            <Pressable
-              style={styles.pinBoxesContainer}
-              onPress={() => {
-                setFocusedField('new');
-                pinInputRef.current?.focus();
-              }}
-            >
-              {[0, 1, 2, 3].map((index) => {
-                const digit = pinInput[index];
-                const isFocused = focusedField === 'new' && pinInput.length === index;
-                return (
-                  <View
-                    key={index}
-                    style={[
-                      styles.pinBox,
-                      digit !== undefined && styles.pinBoxFilled,
-                      isFocused && styles.pinBoxActive,
-                    ]}
-                  >
-                    {digit !== undefined ? (
-                      <View style={styles.pinDot} />
-                    ) : null}
-                  </View>
-                );
-              })}
-            </Pressable>
-
-            <TextInput
+            <PinCodeInput
               ref={pinInputRef}
-              style={styles.hiddenInput}
-              keyboardType="number-pad"
-              maxLength={4}
-              secureTextEntry
+              label={
+                isChangeMode
+                  ? 'Mã PIN mới (4 số)'
+                  : isSetupMode
+                    ? 'Mã PIN mới'
+                    : undefined
+              }
               value={pinInput}
               onChangeText={handlePinChange}
               onFocus={() => setFocusedField('new')}
+              isFocused={focusedField === 'new'}
               autoFocus={!isChangeMode}
-              editable={!isLoading}
-              caretHidden
+              disabled={isLoading}
+              marginTop={isChangeMode ? 14 : 0}
             />
 
             {/* Setup / Change Mode: Confirm PIN */}
             {(isSetupMode || isChangeMode) && (
               <>
-                <Text style={[styles.inputLabel, { marginTop: 14 }]}>
-                  Xác nhận lại mã PIN mới
-                </Text>
-                <Pressable
-                  style={styles.pinBoxesContainer}
-                  onPress={() => {
-                    setFocusedField('confirm');
-                    confirmPinInputRef.current?.focus();
-                  }}
-                >
-                  {[0, 1, 2, 3].map((index) => {
-                    const digit = confirmPin[index];
-                    const isFocused = focusedField === 'confirm' && confirmPin.length === index;
-                    return (
-                      <View
-                        key={index}
-                        style={[
-                          styles.pinBox,
-                          digit !== undefined && styles.pinBoxFilled,
-                          isFocused && styles.pinBoxActive,
-                        ]}
-                      >
-                        {digit !== undefined ? (
-                          <View style={styles.pinDot} />
-                        ) : null}
-                      </View>
-                    );
-                  })}
-                </Pressable>
-
-                <TextInput
+                <PinCodeInput
                   ref={confirmPinInputRef}
-                  style={styles.hiddenInput}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  secureTextEntry
+                  label="Xác nhận lại mã PIN mới"
                   value={confirmPin}
                   onChangeText={handleConfirmPinChange}
                   onFocus={() => setFocusedField('confirm')}
-                  editable={!isLoading}
-                  caretHidden
+                  isFocused={focusedField === 'confirm'}
+                  disabled={isLoading}
+                  marginTop={14}
                 />
 
                 {confirmPin.length === 4 && (
@@ -559,53 +467,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     fontWeight: '500',
-  },
-  inputLabel: {
-    alignSelf: 'flex-start',
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  pinBoxesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    width: '100%',
-    marginVertical: 4,
-  },
-  pinBox: {
-    width: 52,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pinBoxFilled: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
-  },
-  pinBoxActive: {
-    borderColor: '#2563EB',
-    borderWidth: 2,
-    backgroundColor: '#EFF6FF',
-  },
-  pinDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#1E293B',
-  },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
   },
   matchStatusRow: {
     marginTop: 8,

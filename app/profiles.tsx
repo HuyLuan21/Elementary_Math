@@ -16,6 +16,8 @@ import { ProfileCard } from "../src/components/ProfileCard";
 import { EditProfileModal } from "../src/components/EditProfileModal";
 import { BrandHeader } from "../src/components/BrandHeader";
 import { ParentPinModal } from "../src/components/ParentPinModal";
+import { ProfilesEmptyState } from "../src/components/profile/ProfilesEmptyState";
+import { ParentZoneBanner } from "../src/components/profile/ParentZoneBanner";
 
 export default function ProfilesRoute() {
   const router = useRouter();
@@ -227,21 +229,10 @@ export default function ProfilesRoute() {
               ) : null}
             </View>
           ) : (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIllustration}>
-                <Text style={styles.emptyEmoji}>🐣</Text>
-              </View>
-              <Text style={styles.emptyTitle}>Chưa có hồ sơ bé</Text>
-              <Text style={styles.emptyText}>
-                Thêm hồ sơ để bắt đầu hành trình học toán
-              </Text>
-              {!isMaxProfilesReached ? (
-                <TouchableOpacity style={styles.emptyButton} onPress={openCreateForm}>
-                  <Plus size={18} color="#FFFFFF" strokeWidth={2.6} />
-                  <Text style={styles.addButtonText}>Thêm bé</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
+            <ProfilesEmptyState
+              onAddPress={openCreateForm}
+              isMaxProfilesReached={isMaxProfilesReached}
+            />
           )}
 
           {isMaxProfilesReached ? (
@@ -251,18 +242,10 @@ export default function ProfilesRoute() {
           ) : null}
 
           {parentProfile ? (
-            <TouchableOpacity
-              style={styles.parentRow}
-              onPress={() => handleProfileClick(parentProfile)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.parentEmoji}>{parentProfile.avatarIcon}</Text>
-              <View style={styles.parentCopy}>
-                <Text style={styles.parentTitle}>Khu vực phụ huynh</Text>
-                <Text style={styles.parentSubtitle}>Quản lý tài khoản gia đình</Text>
-              </View>
-              <Text style={styles.parentArrow}>›</Text>
-            </TouchableOpacity>
+            <ParentZoneBanner
+              parentProfile={parentProfile}
+              onPress={handleProfileClick}
+            />
           ) : null}
 
           <Text style={styles.accountText} numberOfLines={1}>
@@ -391,17 +374,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#35A9E0",
   },
-  emptyButton: {
-    minHeight: 46,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    backgroundColor: "#35A9E0",
-    marginTop: 19,
-  },
   addButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
   gridContainer: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -7 },
   addCard: {
@@ -428,34 +400,6 @@ const styles = StyleSheet.create({
   },
   addCardTitle: { color: "#168FC5", fontSize: 15, fontWeight: "700", marginTop: 8 },
   addCardSub: { color: "#7B8490", fontSize: 12, marginTop: 3 },
-  emptyState: {
-    minHeight: 270,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#DDE5EC",
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    marginBottom: 18,
-  },
-  emptyIllustration: {
-    width: 94,
-    height: 94,
-    borderRadius: 47,
-    backgroundColor: "#FFF3C9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyEmoji: { fontSize: 51 },
-  emptyTitle: { color: "#111827", fontSize: 19, fontWeight: "700", marginTop: 18 },
-  emptyText: {
-    color: "#6B7280",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 21,
-    marginTop: 6,
-  },
   loadingState: {
     minHeight: 178,
     alignItems: "center",
@@ -501,21 +445,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
-  parentRow: {
-    minHeight: 68,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#DDE5EC",
-    marginTop: 25,
-    paddingHorizontal: 14,
-  },
-  parentEmoji: { fontSize: 28, marginRight: 12 },
-  parentCopy: { flex: 1 },
-  parentTitle: { color: "#263445", fontSize: 14, fontWeight: "700" },
-  parentSubtitle: { color: "#7B8490", fontSize: 12, marginTop: 3 },
-  parentArrow: { color: "#8A96A2", fontSize: 25, marginLeft: 8 },
   accountText: { color: "#89939E", fontSize: 12, textAlign: "center", marginTop: 27 },
 });
