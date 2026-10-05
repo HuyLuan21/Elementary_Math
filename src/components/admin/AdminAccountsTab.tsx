@@ -15,6 +15,8 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   KeyRound,
   Lock,
@@ -28,8 +30,10 @@ import {
 } from 'lucide-react-native';
 import { AdminChildProfile, AdminUserAccount } from '../../types/admin';
 
+import { adminApi } from '../../services/adminApi';
+
 interface AdminAccountsTabProps {
-  accounts: AdminUserAccount[];
+  accounts?: AdminUserAccount[];
   onToggleStatus: (userId: string) => Promise<void>;
   onResetPin: (userId: string) => Promise<void>;
   onDeleteAccount: (userId: string) => Promise<void>;
@@ -74,29 +78,67 @@ const resolveChildAvatar = (avatarIcon: string | null | undefined, index: number
 };
 
 export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
-  accounts,
+  accounts: initialAccounts = [],
   onToggleStatus,
   onResetPin,
   onDeleteAccount,
 }) => {
   const [filterText, setFilterText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [accountsList, setAccountsList] = useState<AdminUserAccount[]>(initialAccounts);
+  const [totalAccounts, setTotalAccounts] = useState<number>(initialAccounts.length);
+  const [totalPages, setTotalPages] = useState<number>(Math.max(1, Math.ceil(initialAccounts.length / 10)));
+  const [isFetching, setIsFetching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUserAccount | null>(null);
   const [viewProfilesModal, setViewProfilesModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const filteredAccounts = accounts.filter(
-    (acc) =>
-      acc.email.toLowerCase().includes(filterText.toLowerCase()) ||
-      acc.name.toLowerCase().includes(filterText.toLowerCase()) ||
-      acc.profiles.some((p) =>
-        p.displayName.toLowerCase().includes(filterText.toLowerCase())
-      )
-  );
+  const fetchAccountsFromServer = async (
+    page: number,
+    status: 'all' | 'active' | 'suspended',
+    search: string
+  ) => {
+    try {
+      setIsFetching(true);
+      const res = await adminApi.getAccounts({
+        page,
+        limit: pageSize,
+        status,
+        search: search.trim() || undefined,
+      });
+
+      if (res && res.data) {
+        setAccountsList(res.data);
+        if (res.pagination) {
+          setTotalAccounts(res.pagination.total);
+          setTotalPages(res.pagination.totalPages);
+        } else {
+          setTotalAccounts(res.data.length);
+          setTotalPages(1);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch accounts:', err);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  // Fetch when page, status, or search query changes
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAccountsFromServer(currentPage, statusFilter, filterText);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [currentPage, statusFilter, filterText, pageSize]);
 
   const handleToggle = async (user: AdminUserAccount) => {
     try {
       setActionLoading(user.id);
       await onToggleStatus(user.id);
+      await fetchAccountsFromServer(currentPage, statusFilter, filterText);
     } finally {
       setActionLoading(null);
     }
@@ -107,6 +149,7 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
       setActionLoading(user.id);
       await onResetPin(user.id);
       Alert.alert('Thành công', `Đã đặt lại mã PIN cho tài khoản ${user.email}`);
+      await fetchAccountsFromServer(currentPage, statusFilter, filterText);
     } finally {
       setActionLoading(null);
     }
@@ -116,6 +159,7 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
     try {
       setActionLoading(user.id);
       await onDeleteAccount(user.id);
+      await fetchAccountsFromServer(currentPage, statusFilter, filterText);
     } finally {
       setActionLoading(null);
     }
@@ -125,6 +169,8 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
     setSelectedUser(user);
     setViewProfilesModal(true);
   };
+
+  const startIndex = (currentPage - 1) * pageSize;
 
   return (
     <View style={styles.container}>
@@ -137,18 +183,82 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
             placeholder="Tìm theo email, tên phụ huynh hoặc tên bé..."
             placeholderTextColor="#94A3B8"
             value={filterText}
-            onChangeText={setFilterText}
+            onChangeText={(t) => {
+              setFilterText(t);
+              setCurrentPage(1);
+            }}
           />
           {filterText ? (
-            <TouchableOpacity onPress={() => setFilterText('')}>
+            <TouchableOpacity onPress={() => { setFilterText(''); setCurrentPage(1); }}>
               <X size={15} color="#94A3B8" />
             </TouchableOpacity>
           ) : null}
         </View>
 
+        {/* Status Filter Tabs */}
+        <View style={styles.statusTabsGroup}>
+          <TouchableOpacity
+            style={[
+              styles.statusTabBtn,
+              statusFilter === 'all' && styles.statusTabBtnActive,
+            ]}
+            onPress={() => {
+              setStatusFilter('all');
+              setCurrentPage(1);
+            }}
+          >
+            <Text
+              style={[
+                styles.statusTabText,
+                statusFilter === 'all' && styles.statusTabTextActive,
+              ]}
+            >
+              Tất cả
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.statusTabBtn,
+              statusFilter === 'active' && styles.statusTabBtnActive,
+            ]}
+            onPress={() => {
+              setStatusFilter('active');
+              setCurrentPage(1);
+            }}
+          >
+            <Text
+              style={[
+                styles.statusTabText,
+                statusFilter === 'active' && styles.statusTabTextActive,
+              ]}
+            >
+              Hoạt động
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.statusTabBtn,
+              statusFilter === 'suspended' && styles.statusTabBtnActive,
+            ]}
+            onPress={() => {
+              setStatusFilter('suspended');
+              setCurrentPage(1);
+            }}
+          >
+            <Text
+              style={[
+                styles.statusTabText,
+                statusFilter === 'suspended' && styles.statusTabTextActive,
+              ]}
+            >
+              Tạm khóa
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.statCounterBadge}>
           <Text style={styles.statCounterText}>
-            Tổng: <Text style={styles.statCounterBold}>{(filteredAccounts.length || 0).toLocaleString('vi-VN')}</Text> tài khoản
+            Tổng: <Text style={styles.statCounterBold}>{(totalAccounts || 0).toLocaleString('vi-VN')}</Text> tài khoản
           </Text>
         </View>
       </View>
@@ -188,20 +298,21 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
 
             {/* Table Rows */}
             <ScrollView style={styles.tableBody}>
-              {filteredAccounts.length === 0 ? (
+              {accountsList.length === 0 ? (
                 <View style={styles.emptyRow}>
                   <Text style={styles.emptyRowText}>
-                    Không tìm thấy tài khoản nào phù hợp với từ khóa.
+                    {isFetching ? 'Đang tải dữ liệu...' : 'Không tìm thấy tài khoản nào phù hợp với từ khóa.'}
                   </Text>
                 </View>
               ) : (
-                filteredAccounts.map((user, index) => {
+                accountsList.map((user, index) => {
                   const isActive = user.status === 'active';
+                  const rowStt = startIndex + index + 1;
                   return (
                     <View key={user.id} style={styles.tableRow}>
                       {/* STT */}
                       <View style={[styles.td, styles.colStt, styles.alignLeft]}>
-                        <Text style={styles.sttText}>{(index + 1).toLocaleString('vi-VN')}</Text>
+                        <Text style={styles.sttText}>{rowStt.toLocaleString('vi-VN')}</Text>
                       </View>
 
                       {/* User info (Text Left) */}
@@ -329,6 +440,110 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
             </ScrollView>
           </View>
         </ScrollView>
+
+        {/* Pagination Bar */}
+        {totalAccounts > 0 && (
+          <View style={styles.paginationBar}>
+            <View style={styles.paginationInfoContainer}>
+              <Text style={styles.paginationInfo}>
+                Hiển thị{' '}
+                <Text style={styles.paginationInfoBold}>
+                  {startIndex + 1} - {Math.min(startIndex + pageSize, totalAccounts)}
+                </Text>{' '}
+                / tổng{' '}
+                <Text style={styles.paginationInfoBold}>
+                  {totalAccounts.toLocaleString('vi-VN')}
+                </Text>{' '}
+                tài khoản
+              </Text>
+            </View>
+
+            <View style={styles.paginationControls}>
+              <TouchableOpacity
+                style={[
+                  styles.pageNavBtn,
+                  currentPage <= 1 && styles.pageNavBtnDisabled,
+                ]}
+                disabled={currentPage <= 1}
+                onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft
+                  size={16}
+                  color={currentPage <= 1 ? '#94A3B8' : '#334155'}
+                />
+                <Text
+                  style={[
+                    styles.pageNavBtnText,
+                    currentPage <= 1 && styles.pageNavBtnTextDisabled,
+                  ]}
+                >
+                  Trước
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.pagePillsGroup}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => {
+                    if (totalPages <= 7) return true;
+                    if (p === 1 || p === totalPages) return true;
+                    return Math.abs(p - currentPage) <= 2;
+                  })
+                  .map((p, idx, arr) => {
+                    const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
+                    const isActive = currentPage === p;
+                    return (
+                      <React.Fragment key={p}>
+                        {showEllipsisBefore && (
+                          <Text style={styles.pageEllipsis}>•••</Text>
+                        )}
+                        <TouchableOpacity
+                          style={[
+                            styles.pageNumberBtn,
+                            isActive && styles.pageNumberBtnActive,
+                          ]}
+                          onPress={() => setCurrentPage(p)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.pageNumberText,
+                              isActive && styles.pageNumberTextActive,
+                            ]}
+                          >
+                            {p}
+                          </Text>
+                        </TouchableOpacity>
+                      </React.Fragment>
+                    );
+                  })}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.pageNavBtn,
+                  currentPage >= totalPages && styles.pageNavBtnDisabled,
+                ]}
+                disabled={currentPage >= totalPages}
+                onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.pageNavBtnText,
+                    currentPage >= totalPages && styles.pageNavBtnTextDisabled,
+                  ]}
+                >
+                  Sau
+                </Text>
+                <ChevronRight
+                  size={16}
+                  color={currentPage >= totalPages ? '#94A3B8' : '#334155'}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Child Profiles Detail Modal */}
@@ -456,6 +671,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
     outlineStyle: 'none' as any,
+  },
+  statusTabsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statusTabBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusTabBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  statusTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  statusTabTextActive: {
+    color: '#2563EB',
+    fontWeight: '700',
   },
   statCounterBadge: {
     backgroundColor: '#EFF6FF',
@@ -668,6 +917,101 @@ const styles = StyleSheet.create({
   emptyRowText: {
     fontSize: 14,
     color: '#64748B',
+  },
+
+  // Pagination Styles
+  paginationBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  paginationInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paginationInfo: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  paginationInfoBold: {
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  paginationControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pageNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pageNavBtnDisabled: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#F1F5F9',
+    opacity: 0.5,
+  },
+  pageNavBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  pageNavBtnTextDisabled: {
+    color: '#94A3B8',
+  },
+  pagePillsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pageNumberBtn: {
+    minWidth: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pageNumberBtnActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  pageNumberText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  pageNumberTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  pageEllipsis: {
+    fontSize: 11,
+    color: '#94A3B8',
+    paddingHorizontal: 4,
+    letterSpacing: 1,
   },
 
   // Modal

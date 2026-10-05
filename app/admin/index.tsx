@@ -48,14 +48,14 @@ export default function AdminDashboardRoute() {
 
   const loadAllData = async () => {
     try {
-      const [m, a, c, b] = await Promise.all([
+      const [m, accountsRes, c, b] = await Promise.all([
         adminApi.getMetrics(),
-        adminApi.getAccounts(),
+        adminApi.getAccounts({ page: 1, limit: 50 }),
         adminApi.getChapters(),
         adminApi.getBadges(),
       ]);
       setMetrics(m);
-      setAccounts(a);
+      setAccounts(Array.isArray(accountsRes) ? accountsRes : accountsRes.data || []);
       setChapters(c);
       setBadges(b);
     } catch (err: unknown) {

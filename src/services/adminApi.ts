@@ -4,6 +4,7 @@ import {
   AdminChapter,
   AdminLesson,
   AdminMetricOverview,
+  AdminPagination,
   AdminUserAccount,
 } from '../types/admin';
 
@@ -28,10 +29,18 @@ export const adminApi = {
     }
   },
 
-  // 2. User Accounts
-  getAccounts: async (): Promise<AdminUserAccount[]> => {
-    const response = await apiClient.get<{ data: AdminUserAccount[] }>('/admin/accounts');
-    return response.data.data;
+  // 2. User Accounts with Pagination & Filters
+  getAccounts: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'all' | 'active' | 'suspended';
+  }): Promise<{ data: AdminUserAccount[]; pagination?: AdminPagination }> => {
+    const response = await apiClient.get<{
+      data: AdminUserAccount[];
+      pagination?: AdminPagination;
+    }>('/admin/accounts', { params });
+    return response.data;
   },
 
   toggleAccountStatus: async (userId: string): Promise<AdminUserAccount> => {

@@ -9,6 +9,15 @@ export interface AdminMetricOverview {
   completedLessonsTotal: number;
 }
 
+export interface AdminPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export interface AdminUserAccount {
   id: string;
   email: string;
