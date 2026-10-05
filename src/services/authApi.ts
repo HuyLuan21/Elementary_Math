@@ -103,6 +103,15 @@ export const authApi = {
     return response.data.data.verified;
   },
 
+  // Đổi mã PIN phụ huynh
+  changePin: async (oldPin: string, newPin: string): Promise<boolean> => {
+    const response = await apiClient.post<{ message: string; data: { success: boolean } }>("/auth/pin/change", {
+      oldPin,
+      newPin,
+    });
+    return response.data.data.success;
+  },
+
   // Lấy thông tin tài khoản hiện tại từ backend (/auth/me)
   getMe: async (token?: string): Promise<UserData> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;

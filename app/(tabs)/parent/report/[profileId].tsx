@@ -179,22 +179,6 @@ export default function ChildReportRoute() {
                 <EmptyReport message="Bé chưa có huy hiệu nào" />
               )}
             </ReportSection>
-            <ReportSection title="🏷️ Nhãn dán">
-              {report.stickers.length ? (
-                <View style={styles.collectionGrid}>
-                  {report.stickers.map((sticker) => (
-                    <AchievementCard
-                      key={sticker.id}
-                      name={sticker.name}
-                      imageUrl={sticker.image_url}
-                      placeholder="🌟"
-                    />
-                  ))}
-                </View>
-              ) : (
-                <EmptyReport message="Bé chưa có nhãn dán nào" />
-              )}
-            </ReportSection>
             <Pressable
               accessibilityRole="button"
               onPress={goToOverview}
@@ -266,11 +250,6 @@ function SummarySection({
           value={summary.badge_count}
           label="Huy hiệu"
           emoji="🏅"
-        />
-        <SummaryMetric
-          value={summary.sticker_count}
-          label="Nhãn dán"
-          emoji="🏷️"
         />
         <SummaryMetric
           value={formatDuration(summary.total_seconds)}

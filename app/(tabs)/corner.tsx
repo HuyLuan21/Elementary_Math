@@ -33,7 +33,6 @@ import {
   emathApi,
   KidCornerData,
   KidCornerBadge,
-  KidCornerSticker,
 } from "../../src/services/emathApi";
 import { storage } from "../../src/utils/storage";
 import { ParentPinModal } from "../../src/components/ParentPinModal";
@@ -49,27 +48,6 @@ const BADGE_META: Record<string, { emoji: string; color: string }> = {
   TIME_MASTER: { emoji: "⏰", color: "#E9DDFF" },
   STREAK_7_DAYS: { emoji: "🔥", color: "#FFDF9B" },
   TEN_LESSONS: { emoji: "🌟", color: "#FFD167" },
-};
-
-const STICKER_EMOJI_MAP: Record<
-  string,
-  { emoji: string; bg: string; color: string }
-> = {
-  STICKER_RED: { emoji: "🐱", bg: "#FDF2F8", color: "#AE2F34" },
-  STICKER_BLUE: { emoji: "🐟", bg: "#F0F9FF", color: "#00658D" },
-  STICKER_YELLOW: { emoji: "🐥", bg: "#FEFCE8", color: "#765900" },
-  STICKER_GREEN: { emoji: "🐸", bg: "#F0FDF4", color: "#15803D" },
-  STICKER_MIXED_COLORS: { emoji: "🌈", bg: "#FAF5FF", color: "#6B21A8" },
-  STICKER_CIRCLE: { emoji: "🐻", bg: "#FFF7ED", color: "#785A00" },
-  STICKER_SQUARE: { emoji: "🐼", bg: "#F3F4F6", color: "#374151" },
-  STICKER_TRIANGLE: { emoji: "🐠", bg: "#ECFEFF", color: "#0E7490" },
-  STICKER_RECTANGLE: { emoji: "🦌", bg: "#FFFBEB", color: "#92400E" },
-  STICKER_SHAPES: { emoji: "✨", bg: "#FAF5FF", color: "#6B21A8" },
-  STICKER_ONE: { emoji: "🐝", bg: "#FFFBEB", color: "#D97706" },
-  STICKER_TWO: { emoji: "🦆", bg: "#FEFCE8", color: "#CA8A04" },
-  STICKER_THREE: { emoji: "🐱", bg: "#FDF2F8", color: "#DB2777" },
-  STICKER_FOUR: { emoji: "🐠", bg: "#ECFEFF", color: "#0891B2" },
-  STICKER_COUNTING: { emoji: "⭐", bg: "#FFF7ED", color: "#EA580C" },
 };
 
 export default function AchievementsRoute() {
@@ -141,10 +119,6 @@ export default function AchievementsRoute() {
   const totalBadgesCount =
     kidCornerData?.stats?.totalBadgesCount ||
     (kidCornerData?.badges?.length ?? 8);
-  const stickersCount = kidCornerData?.stats?.totalStickersCollected ?? 0;
-  const totalStickersCount =
-    kidCornerData?.stats?.totalStickersCount ||
-    (kidCornerData?.stickers?.length ?? 5);
 
   const displayedBadges =
     kidCornerData?.badges && kidCornerData.badges.length > 0
@@ -161,35 +135,13 @@ export default function AchievementsRoute() {
         }))
       : [];
 
-  const displayedStickers =
-    kidCornerData?.stickers && kidCornerData.stickers.length > 0
-      ? kidCornerData.stickers.map((s) => ({
-          id: s.id,
-          code: s.code,
-          name: s.name,
-          desc: s.desc,
-          isUnlocked: s.isUnlocked,
-          emoji: STICKER_EMOJI_MAP[s.code]?.emoji || "🐾",
-          bg: s.isUnlocked
-            ? STICKER_EMOJI_MAP[s.code]?.bg || "#FEFCE8"
-            : "#F3F4F6",
-          color: s.isUnlocked
-            ? STICKER_EMOJI_MAP[s.code]?.color || "#765900"
-            : "#94A3B8",
-          tag: s.isUnlocked ? "Bạn nhỏ" : "Đang khóa 🔒",
-          soundText: s.isUnlocked
-            ? `${s.name} xin chào bé! ${s.desc || ""}`
-            : `Bạn nhỏ ${s.name} đang bị khóa. Bé hãy hoàn thành bài học để mở khóa nhé!`,
-        }))
-      : [];
-
   const speakGreeting = (customMessage?: string) => {
     let message = customMessage;
     if (!message) {
       if (isParent) {
         message = `Xin chào Phụ huynh ${profile.name}. Báo cáo học tập của bé đã sẵn sàng.`;
       } else if (earnedBadgesCount === 0) {
-        message = `${profile.name} ơi! Hãy làm bài học đầu tiên để thu thập những huy hiệu và bạn nhỏ đầu tiên nhé!`;
+        message = `${profile.name} ơi! Hãy làm bài học đầu tiên để thu thập những huy hiệu lấp lánh đầu tiên nhé!`;
       } else {
         message = `${profile.name} ơi! Bé đã đạt ${earnedBadgesCount} huy hiệu xuất sắc. Cùng tiếp tục cố gắng nhé!`;
       }
@@ -300,7 +252,9 @@ export default function AchievementsRoute() {
             {/* Mascot & Encouragement Display */}
             <View style={styles.mascotRow}>
               <View style={styles.mascotAvatarBox}>
-                <Text style={styles.mascotEmoji}>🦁</Text>
+                <Text style={styles.mascotEmoji}>
+                  {profile.avatarIcon || "🦁"}
+                </Text>
               </View>
 
               <View style={styles.encouragementWrapper}>
@@ -325,9 +279,9 @@ export default function AchievementsRoute() {
             <View
               style={[styles.statTokenIconWrap, { backgroundColor: "#FFDF9B" }]}
             >
-              <Trophy size={18} color="#251A00" />
+              <Trophy size={20} color="#251A00" />
             </View>
-            <Text style={styles.statTokenLabel}>Huy hiệu</Text>
+            <Text style={styles.statTokenLabel}>Huy hiệu đã đạt</Text>
             <Text style={styles.statTokenNumber}>{earnedBadgesCount}</Text>
           </View>
 
@@ -336,21 +290,10 @@ export default function AchievementsRoute() {
             <View
               style={[styles.statTokenIconWrap, { backgroundColor: "#FFD167" }]}
             >
-              <Star size={18} color="#765900" fill="#765900" />
+              <Star size={20} color="#765900" fill="#765900" />
             </View>
-            <Text style={styles.statTokenLabel}>Ngôi sao</Text>
+            <Text style={styles.statTokenLabel}>Tổng ngôi sao</Text>
             <Text style={styles.statTokenNumber}>{totalStars}</Text>
-          </View>
-
-          {/* Token 3: Stickers */}
-          <View style={styles.statTokenCard}>
-            <View
-              style={[styles.statTokenIconWrap, { backgroundColor: "#FFDAD8" }]}
-            >
-              <Heart size={18} color="#AE2F34" fill="#AE2F34" />
-            </View>
-            <Text style={styles.statTokenLabel}>Bạn nhỏ</Text>
-            <Text style={styles.statTokenNumber}>{stickersCount}</Text>
           </View>
         </View>
 
@@ -451,82 +394,6 @@ export default function AchievementsRoute() {
                 </View>
               );
             })}
-          </View>
-        </View>
-
-        {/* SECTION 4: STICKERS / PET FRIENDS COLLECTION */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeadingRow}>
-            <View style={styles.headingLeftGroup}>
-              <View
-                style={[
-                  styles.headingIndicator,
-                  { backgroundColor: "#FF7372" },
-                ]}
-              />
-              <Text style={styles.sectionMainTitle}>Bạn nhỏ đồng hành</Text>
-            </View>
-            <View style={[styles.countPill, { backgroundColor: "#FFDAD8" }]}>
-              <Text style={[styles.countPillText, { color: "#AE2F34" }]}>
-                {stickersCount}/{totalStickersCount} bạn
-              </Text>
-            </View>
-          </View>
-
-          {/* Audio Instruction Prompt Pill */}
-          <View style={styles.instructionPill}>
-            <Volume2 size={16} color="#00658D" />
-            <Text style={styles.instructionText}>
-              Chạm vào bạn nhỏ để nghe lời chào vui nhộn nhé!
-            </Text>
-          </View>
-
-          {/* 3-Column Grid of Chubby Animal Sticker Cards (Max 3 items per row) */}
-          <View style={styles.stickersGrid}>
-            {displayedStickers.map((sticker) => (
-              <TouchableOpacity
-                key={sticker.id}
-                style={[
-                  styles.stickerCard3D,
-                  !sticker.isUnlocked && {
-                    opacity: 0.65,
-                    backgroundColor: "#F8FAFC",
-                  },
-                ]}
-                activeOpacity={0.85}
-                onPress={() => speakGreeting(sticker.soundText)}
-              >
-                <View
-                  style={[
-                    styles.stickerAvatarWrap,
-                    { backgroundColor: sticker.bg },
-                  ]}
-                >
-                  <Text style={styles.stickerAvatarEmoji}>
-                    {sticker.isUnlocked ? sticker.emoji : "🔒"}
-                  </Text>
-                </View>
-
-                <Text style={styles.stickerNameText} numberOfLines={1}>
-                  {sticker.name}
-                </Text>
-
-                <View
-                  style={[
-                    styles.stickerTagBadge,
-                    { backgroundColor: sticker.bg },
-                  ]}
-                >
-                  <Volume2 size={9} color={sticker.color} />
-                  <Text
-                    style={[styles.stickerTagText, { color: sticker.color }]}
-                    numberOfLines={1}
-                  >
-                    {sticker.tag}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 

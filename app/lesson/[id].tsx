@@ -195,16 +195,12 @@ export default function LessonScreen() {
         return;
       }
       console.warn("Lỗi tải câu hỏi từ DB:", err);
-      // Chỉ cho phép fallback nếu là bài đầu tiên của chương 1
-      if (id === "00000000-0000-4000-8000-000000000500" || id === "1") {
-        setQuestions(FALLBACK_QUESTIONS);
-      } else {
-        setIsLockedLesson(true);
-        const msg =
-          "Bài học này đang bị khóa 🔒. Bé hãy hoàn thành bài học trước để mở khóa nhé!";
-        setLockMessage(msg);
-        speak(msg, { pitch: 1.2, rate: 0.95 });
-      }
+      setIsLockedLesson(true);
+      const msg =
+        responseData?.message ||
+        "Bài học này đang bị khóa 🔒 hoặc chưa có sẵn. Bé hãy kiểm tra lại nhé!";
+      setLockMessage(msg);
+      speak(msg, { pitch: 1.2, rate: 0.95 });
     } finally {
       setLoading(false);
     }
@@ -334,9 +330,6 @@ export default function LessonScreen() {
               targetProfileId = parsed?.id;
             }
           } catch (e) {}
-        }
-        if (!targetProfileId) {
-          targetProfileId = "00000000-0000-4000-8000-000000000101";
         }
 
         let targetToken = authToken;

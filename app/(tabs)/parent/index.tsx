@@ -10,10 +10,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, LogOut, RefreshCw, Users } from "lucide-react-native";
+import { ArrowLeft, KeyRound, LogOut, RefreshCw, Users } from "lucide-react-native";
 import { useAuth } from "../../../src/context/AuthContext";
 import { parentApi } from "../../../src/services/parentApi";
 import { ParentOverviewProfile } from "../../../src/types/parentReport";
+import { ParentPinModal } from "../../../src/components/ParentPinModal";
 
 type OverviewState = {
   status: "loading" | "success" | "error";
@@ -24,6 +25,7 @@ export default function ParentOverviewRoute() {
   const router = useRouter();
   const { signOut } = useAuth();
   const [retryCount, setRetryCount] = useState(0);
+  const [changePinVisible, setChangePinVisible] = useState(false);
   const [overviewState, setOverviewState] = useState<OverviewState>({
     status: "loading",
     profiles: [],
@@ -89,6 +91,15 @@ export default function ParentOverviewRoute() {
           <View style={styles.headerRightActions}>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Đổi mã PIN"
+              onPress={() => setChangePinVisible(true)}
+              style={styles.changePinButton}
+            >
+              <KeyRound size={15} color="#8C6410" />
+              <Text style={styles.changePinText}>Đổi PIN</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel="Đổi hồ sơ"
               onPress={() => router.replace("/profiles")}
               style={styles.switchProfileButton}
@@ -134,7 +145,7 @@ export default function ParentOverviewRoute() {
           </View>
         ) : overviewState.profiles.length === 0 ? (
           <View style={styles.stateCard}>
-            <Text style={styles.stateEmoji}>👋</Text>
+            <Text style={styles.stateEmoji}>🧸</Text>
             <Text style={styles.stateTitle}>Chưa có hồ sơ bé</Text>
             <Text style={styles.stateDescription}>
               Hãy thêm hồ sơ bé để xem báo cáo học tập.
@@ -159,6 +170,13 @@ export default function ParentOverviewRoute() {
         )}
       </ScrollView>
 
+      {/* Modal Đổi mã PIN */}
+      <ParentPinModal
+        visible={changePinVisible}
+        mode="change"
+        onClose={() => setChangePinVisible(false)}
+        onSuccess={() => setChangePinVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -216,7 +234,6 @@ function ProfileOverviewCard({
         />
         <OverviewMetric value={profile.summary.learning_days} label="Ngày học" />
         <OverviewMetric value={profile.summary.badge_count} label="Huy hiệu" />
-        <OverviewMetric value={profile.summary.sticker_count} label="Nhãn dán" />
         <OverviewMetric
           value={formatDuration(profile.summary.total_seconds)}
           label="Thời gian học"
@@ -312,6 +329,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  changePinButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: "#FFF2D6",
+    borderWidth: 1,
+    borderColor: "#FFE08A",
+  },
+  changePinText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#8C6410",
   },
   switchProfileButton: {
     flexDirection: "row",

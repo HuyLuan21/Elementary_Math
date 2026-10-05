@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LogOut, Plus, RefreshCw } from "lucide-react-native";
+import { KeyRound, LogOut, Plus, RefreshCw } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/context/AuthContext";
@@ -36,6 +36,7 @@ export default function ProfilesRoute() {
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
   const [formVisible, setFormVisible] = useState(false);
   const [verifyPinVisible, setVerifyPinVisible] = useState(false);
+  const [changePinVisible, setChangePinVisible] = useState(false);
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
   const childProfiles = profiles.filter((profile) => profile.role === "child");
   const parentProfile = profiles.find((profile) => profile.role === "parent");
@@ -117,15 +118,26 @@ export default function ProfilesRoute() {
       <View style={styles.navBar}>
         <View style={styles.navInner}>
           <BrandHeader />
-          <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={handleSignOut}
-            accessibilityRole="button"
-            accessibilityLabel="Đăng xuất tài khoản"
-          >
-            <LogOut size={17} color="#6B7280" />
-            <Text style={styles.logoutText}>Đăng xuất</Text>
-          </TouchableOpacity>
+          <View style={styles.navActions}>
+            <TouchableOpacity
+              style={styles.changePinBtn}
+              onPress={() => setChangePinVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Đổi mã PIN phụ huynh"
+            >
+              <KeyRound size={16} color="#8C6410" />
+              <Text style={styles.changePinText}>Đổi PIN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={handleSignOut}
+              accessibilityRole="button"
+              accessibilityLabel="Đăng xuất tài khoản"
+            >
+              <LogOut size={16} color="#6B7280" />
+              <Text style={styles.logoutText}>Đăng xuất</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -275,6 +287,12 @@ export default function ProfilesRoute() {
         onClose={pendingProfile ? handleVerifyPinClose : () => setVerifyPinVisible(false)}
         onSuccess={pendingProfile ? handleProfileSwitchVerified : handleAccountSwitchVerified}
       />
+      <ParentPinModal
+        visible={changePinVisible}
+        mode="change"
+        onClose={() => setChangePinVisible(false)}
+        onSuccess={() => setChangePinVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -296,6 +314,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  navActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  changePinBtn: {
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#FFF2D6",
+    borderWidth: 1,
+    borderColor: "#FFE08A",
+  },
+  changePinText: { color: "#8C6410", fontSize: 13, fontWeight: "700" },
   logoutBtn: {
     minHeight: 40,
     flexDirection: "row",
