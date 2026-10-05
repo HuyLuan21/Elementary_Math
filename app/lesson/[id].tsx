@@ -18,6 +18,7 @@ import { useAuth } from "../../src/context/AuthContext";
 import { emathApi, QuestionData } from "../../src/services/emathApi";
 import { storage } from "../../src/utils/storage";
 import { ParentPinModal } from "../../src/components/ParentPinModal";
+import { playSoundEffect } from "../../src/utils/soundPlayer";
 
 const { width } = Dimensions.get("window");
 
@@ -173,7 +174,7 @@ export default function LessonScreen() {
       const data = await emathApi.getLessonQuestions(
         id,
         currentToken || undefined,
-        currentProfileId || undefined
+        currentProfileId || undefined,
       );
 
       if (data && data.questions && data.questions.length > 0) {
@@ -199,7 +200,8 @@ export default function LessonScreen() {
         setQuestions(FALLBACK_QUESTIONS);
       } else {
         setIsLockedLesson(true);
-        const msg = "Bài học này đang bị khóa 🔒. Bé hãy hoàn thành bài học trước để mở khóa nhé!";
+        const msg =
+          "Bài học này đang bị khóa 🔒. Bé hãy hoàn thành bài học trước để mở khóa nhé!";
         setLockMessage(msg);
         speak(msg, { pitch: 1.2, rate: 0.95 });
       }
@@ -214,12 +216,25 @@ export default function LessonScreen() {
 
   const currentQuestion = questions[currentIndex] || questions[0];
 
-  // Phát âm câu hỏi khi chuyển câu & Cập nhật thanh tiến trình chuẩn 100%
+  // Phát âm câu hỏi khi chuyển câu mới
   useEffect(() => {
     if (!loading && currentQuestion && !isCompleted && !showExitModal) {
       speak(currentQuestion.questionText);
     }
 
+    return () => {
+      stopSpeech();
+    };
+  }, [
+    currentIndex,
+    loading,
+    isCompleted,
+    showExitModal,
+    currentQuestion?.id,
+  ]);
+
+  // Cập nhật thanh tiến trình chuẩn 100%
+  useEffect(() => {
     if (questions.length > 0) {
       const targetPercent = isCompleted
         ? 100
@@ -233,19 +248,7 @@ export default function LessonScreen() {
         useNativeDriver: false,
       }).start();
     }
-
-    return () => {
-      stopSpeech();
-    };
-  }, [
-    currentIndex,
-    loading,
-    isCompleted,
-    isAnswerChecked,
-    currentQuestion?.id,
-    showExitModal,
-    questions.length,
-  ]);
+  }, [currentIndex, isAnswerChecked, isCompleted, questions.length]);
 
   const handleSpeakQuestion = () => {
     if (currentQuestion?.questionText) {
@@ -269,13 +272,11 @@ export default function LessonScreen() {
     setIsAnswerChecked(true);
 
     if (correct) {
+      playSoundEffect("correct");
       setCorrectAnswersCount((prev) => prev + 1);
       setEarnedXp((prev) => prev + 10);
-      speak(currentQuestion.explanation || "Chính xác! Bé giỏi quá!", {
-        pitch: 1.2,
-        rate: 1.05,
-      });
     } else {
+      playSoundEffect("wrong");
       // Trừ 1 tim và hiệu ứng rung tim
       setHearts((prev) => Math.max(0, prev - 1));
       Animated.sequence([
@@ -290,11 +291,6 @@ export default function LessonScreen() {
           useNativeDriver: true,
         }),
       ]).start();
-
-      speak("Chưa đúng rồi bé ơi! Cố gắng ở câu tiếp theo nhé!", {
-        pitch: 1.1,
-        rate: 1.05,
-      });
     }
 
     // Hiện bottom feedback sheet
@@ -320,6 +316,7 @@ export default function LessonScreen() {
         setCurrentIndex((prev) => prev + 1);
       } else {
         stopSpeech();
+        playSoundEffect("complete");
         setIsCompleted(true);
         Animated.timing(progressAnim, {
           toValue: 100,
@@ -394,7 +391,9 @@ export default function LessonScreen() {
           </View>
 
           <View style={styles.lockedBadgePill}>
-            <Text style={styles.lockedBadgePillText}>LỘ TRÌNH CHƯA MỞ KHÓA</Text>
+            <Text style={styles.lockedBadgePillText}>
+              LỘ TRÌNH CHƯA MỞ KHÓA
+            </Text>
           </View>
 
           <Text style={styles.lockedTitle}>Chưa thể truy cập bài này!</Text>
@@ -411,7 +410,7 @@ export default function LessonScreen() {
               speak(
                 lockMessage ||
                   "Bài học này đang bị khóa. Bé hãy hoàn thành bài học trước để mở khóa nhé!",
-                { pitch: 1.2, rate: 0.95 }
+                { pitch: 1.2, rate: 0.95 },
               )
             }
           >
@@ -425,7 +424,9 @@ export default function LessonScreen() {
               activeOpacity={0.88}
               onPress={() => router.replace("/(tabs)/journey")}
             >
-              <Text style={styles.lockedBackBtnText}>QUAY VỀ HÀNH TRÌNH 🗺️</Text>
+              <Text style={styles.lockedBackBtnText}>
+                QUAY VỀ HÀNH TRÌNH 🗺️
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -433,7 +434,9 @@ export default function LessonScreen() {
               activeOpacity={0.85}
               onPress={handleSwitchProfile}
             >
-              <Text style={styles.lockedSecondaryBtnText}>ĐỔI HỒ SƠ KHÁC 👨‍👩‍👧‍👦</Text>
+              <Text style={styles.lockedSecondaryBtnText}>
+                ĐỔI HỒ SƠ KHÁC 👨‍👩‍👧‍👦
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -467,45 +470,36 @@ export default function LessonScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* 1. TOP BAR: EXIT + PROGRESS + HEARTS */}
-      <View style={styles.topBar}>
-        {/* Nút thoát */}
-        <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={() => setShowExitModal(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={24} color="#6F7880" />
-        </TouchableOpacity>
-
-        {/* Thanh tiến độ */}
-        <View style={styles.progressBarTrack}>
-          <Animated.View
-            style={[
-              styles.progressBarFill,
-              {
-                width: progressAnim.interpolate({
-                  inputRange: [0, 100],
-                  outputRange: ["0%", "100%"],
-                }),
-              },
-            ]}
+      {/* 1. TOP BAR: EXIT + PROGRESS */}
+      {!isCompleted && (
+        <View style={styles.topBar}>
+          {/* Nút thoát */}
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => setShowExitModal(true)}
+            activeOpacity={0.7}
           >
-            <View style={styles.progressHighlight} />
-          </Animated.View>
-        </View>
+            <Ionicons name="close" size={24} color="#6F7880" />
+          </TouchableOpacity>
 
-        {/* Trái tim (Mạng sống) */}
-        <Animated.View
-          style={[
-            styles.heartBadge,
-            { transform: [{ scale: heartScaleAnim }] },
-          ]}
-        >
-          <Text style={styles.heartEmoji}>❤️</Text>
-          <Text style={styles.heartCountText}>{hearts}</Text>
-        </Animated.View>
-      </View>
+          {/* Thanh tiến độ */}
+          <View style={styles.progressBarTrack}>
+            <Animated.View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: ["0%", "100%"],
+                  }),
+                },
+              ]}
+            >
+              <View style={styles.progressHighlight} />
+            </Animated.View>
+          </View>
+        </View>
+      )}
 
       {!isCompleted ? (
         <>

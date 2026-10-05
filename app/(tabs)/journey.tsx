@@ -12,10 +12,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  FontAwesome5,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { BrandHeader } from "../../src/components/BrandHeader";
 import { useAuth } from "../../src/context/AuthContext";
-import { emathApi, JourneyChapter, JourneyLevel } from "../../src/services/emathApi";
+import {
+  emathApi,
+  JourneyChapter,
+  JourneyLevel,
+} from "../../src/services/emathApi";
 import { storage } from "../../src/utils/storage";
 
 const { width } = Dimensions.get("window");
@@ -211,7 +219,10 @@ export default function JourneyRoute() {
         } catch (e) {}
       }
 
-      const data = await emathApi.getJourney(currentProfileId || undefined, currentToken || undefined);
+      const data = await emathApi.getJourney(
+        currentProfileId || undefined,
+        currentToken || undefined,
+      );
       if (data && data.length > 0) {
         setChapters(data);
       } else {
@@ -259,7 +270,7 @@ export default function JourneyRoute() {
   useFocusEffect(
     useCallback(() => {
       loadJourney();
-    }, [loadJourney])
+    }, [loadJourney]),
   );
 
   useEffect(() => {
@@ -275,7 +286,7 @@ export default function JourneyRoute() {
           duration: 700,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, [bounceAnim]);
 
@@ -286,21 +297,6 @@ export default function JourneyRoute() {
       {/* HEADER TOP BAR */}
       <View style={styles.topHeader}>
         <BrandHeader />
-        {/* Gamification Bar */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBadge}>
-            <Text style={styles.statIcon}>🔥</Text>
-            <Text style={styles.statText}>5</Text>
-          </View>
-          <View style={styles.statBadge}>
-            <Text style={styles.statIcon}>💎</Text>
-            <Text style={[styles.statText, { color: "#38BDF8" }]}>350</Text>
-          </View>
-          <View style={styles.statBadge}>
-            <Text style={styles.statIcon}>❤️</Text>
-            <Text style={[styles.statText, { color: "#EF4444" }]}>5</Text>
-          </View>
-        </View>
       </View>
 
       {/* SCROLLABLE WINDING MAP */}
@@ -318,19 +314,19 @@ export default function JourneyRoute() {
             }}
           >
             {/* Chapter Banner */}
-            <View style={[styles.chapterBanner, { borderLeftColor: chap.color || "#35A9E0" }]}>
+            <View
+              style={[
+                styles.chapterBanner,
+                { borderLeftColor: chap.color || "#35A9E0" },
+              ]}
+            >
               <View style={styles.chapterInfo}>
-                <Text style={styles.chapterTag}>HỌC PHẦN {chap.orderIndex || chap.id}</Text>
+                <Text style={styles.chapterTag}>
+                  HỌC PHẦN {chap.orderIndex || chap.id}
+                </Text>
                 <Text style={styles.chapterTitle}>{chap.title}</Text>
                 <Text style={styles.chapterDesc}>{chap.desc}</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.guideBookBtn, { backgroundColor: chap.color || "#35A9E0" }]}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="book" size={18} color="#FFF" />
-                <Text style={styles.guideBookText}>Sổ tay</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Path Nodes */}
@@ -426,7 +422,11 @@ export default function JourneyRoute() {
 
                       {/* Icon inside Node */}
                       {isLocked ? (
-                        <Ionicons name="lock-closed" size={24} color="#94A3B8" />
+                        <Ionicons
+                          name="lock-closed"
+                          size={24}
+                          color="#94A3B8"
+                        />
                       ) : item.type === "chest" ? (
                         <MaterialCommunityIcons
                           name="treasure-chest"

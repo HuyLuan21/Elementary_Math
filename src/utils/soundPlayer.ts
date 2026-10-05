@@ -163,3 +163,52 @@ export const playRealAnimalSound = async (
     rate: 1.05,
   });
 };
+
+const LESSON_SOUNDS = {
+  correct: require("../../assets/Duolingo Correct - QuickSounds.com.mp3"),
+  wrong: require("../../assets/Duolingo-Wronggg.mp3"),
+  complete: require("../../assets/Duolingo-End-of-Lesson.mp3"),
+};
+
+export type SoundEffectType = keyof typeof LESSON_SOUNDS;
+
+/**
+ * Phát hiệu ứng âm thanh (Đúng / Sai / Hoàn thành bài học)
+ */
+export const playSoundEffect = async (type: SoundEffectType) => {
+  try {
+    const soundSource = LESSON_SOUNDS[type];
+    if (!soundSource) return;
+
+    // 1. Web HTML5 Audio
+    if (Platform.OS === "web" && typeof window !== "undefined" && (window as any).Audio) {
+      try {
+        const audioUri =
+          typeof soundSource === "string"
+            ? soundSource
+            : soundSource.default || soundSource.uri || soundSource;
+        const audio = new (window as any).Audio(audioUri);
+        audio.volume = 1.0;
+        audio.play().catch(() => {});
+        return;
+      } catch (err) {}
+    }
+
+    // 2. React Native (iOS / Android) với expo-av
+    const ExpoAv = require("expo-av");
+    if (ExpoAv && ExpoAv.Audio && ExpoAv.Audio.Sound) {
+      const { sound } = await ExpoAv.Audio.Sound.createAsync(
+        soundSource,
+        { shouldPlay: true, volume: 1.0 }
+      );
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (status.didJustFinish) {
+          sound.unloadAsync().catch(() => {});
+        }
+      });
+    }
+  } catch (error) {
+    console.warn(`Lỗi phát âm thanh hiệu ứng [${type}]:`, error);
+  }
+};
+

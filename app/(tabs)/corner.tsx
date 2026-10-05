@@ -29,7 +29,12 @@ import {
 } from "lucide-react-native";
 
 import { useAuth } from "../../src/context/AuthContext";
-import { emathApi, KidCornerData, KidCornerBadge, KidCornerSticker } from "../../src/services/emathApi";
+import {
+  emathApi,
+  KidCornerData,
+  KidCornerBadge,
+  KidCornerSticker,
+} from "../../src/services/emathApi";
 import { storage } from "../../src/utils/storage";
 import { ParentPinModal } from "../../src/components/ParentPinModal";
 
@@ -46,7 +51,10 @@ const BADGE_META: Record<string, { emoji: string; color: string }> = {
   TEN_LESSONS: { emoji: "🌟", color: "#FFD167" },
 };
 
-const STICKER_EMOJI_MAP: Record<string, { emoji: string; bg: string; color: string }> = {
+const STICKER_EMOJI_MAP: Record<
+  string,
+  { emoji: string; bg: string; color: string }
+> = {
   STICKER_RED: { emoji: "🐱", bg: "#FDF2F8", color: "#AE2F34" },
   STICKER_BLUE: { emoji: "🐟", bg: "#F0F9FF", color: "#00658D" },
   STICKER_YELLOW: { emoji: "🐥", bg: "#FEFCE8", color: "#765900" },
@@ -68,14 +76,15 @@ export default function AchievementsRoute() {
   const router = useRouter();
   const { activeProfile, authToken, signOut } = useAuth();
   const [pinModalVisible, setPinModalVisible] = useState(false);
-  const [kidCornerData, setKidCornerData] = useState<KidCornerData | null>(null);
+  const [kidCornerData, setKidCornerData] = useState<KidCornerData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   const profile = activeProfile || {
     id: "",
     name: "Bé",
     role: "child" as const,
-    grade: "Lớp 1",
     avatarColor: "#FFDF9B",
     avatarIcon: "🦁",
     totalStars: 0,
@@ -106,7 +115,10 @@ export default function AchievementsRoute() {
 
     setLoading(true);
     try {
-      const data = await emathApi.getKidCorner(currentProfileId, currentToken || undefined);
+      const data = await emathApi.getKidCorner(
+        currentProfileId,
+        currentToken || undefined,
+      );
       if (data) {
         setKidCornerData(data);
       }
@@ -120,14 +132,19 @@ export default function AchievementsRoute() {
   useFocusEffect(
     useCallback(() => {
       loadKidCornerData();
-    }, [loadKidCornerData])
+    }, [loadKidCornerData]),
   );
 
-  const totalStars = kidCornerData?.stats?.totalStars ?? (activeProfile?.totalStars ?? 0);
+  const totalStars =
+    kidCornerData?.stats?.totalStars ?? activeProfile?.totalStars ?? 0;
   const earnedBadgesCount = kidCornerData?.stats?.totalBadgesEarned ?? 0;
-  const totalBadgesCount = kidCornerData?.stats?.totalBadgesCount || (kidCornerData?.badges?.length ?? 8);
+  const totalBadgesCount =
+    kidCornerData?.stats?.totalBadgesCount ||
+    (kidCornerData?.badges?.length ?? 8);
   const stickersCount = kidCornerData?.stats?.totalStickersCollected ?? 0;
-  const totalStickersCount = kidCornerData?.stats?.totalStickersCount || (kidCornerData?.stickers?.length ?? 5);
+  const totalStickersCount =
+    kidCornerData?.stats?.totalStickersCount ||
+    (kidCornerData?.stickers?.length ?? 5);
 
   const displayedBadges =
     kidCornerData?.badges && kidCornerData.badges.length > 0
@@ -137,7 +154,8 @@ export default function AchievementsRoute() {
           name: b.title,
           description: b.desc,
           tag: b.status === "achieved" ? "Hoàn thành 🏆" : "Chưa đạt 🔒",
-          status: b.status === "achieved" ? ("earned" as const) : ("locked" as const),
+          status:
+            b.status === "achieved" ? ("earned" as const) : ("locked" as const),
           emoji: BADGE_META[b.code]?.emoji || "🏅",
           color: BADGE_META[b.code]?.color || "#FFDF9B",
         }))
@@ -198,39 +216,25 @@ export default function AchievementsRoute() {
       <View style={styles.topAppBar}>
         <View style={styles.headerInner}>
           {/* Left: Profile Badge */}
-          <TouchableOpacity
-            style={styles.profileContainer}
-            activeOpacity={0.85}
-            onPress={handleSwitchProfile}
-          >
+          <View style={styles.profileContainer}>
             <View
               style={[
                 styles.avatarRing,
                 { backgroundColor: profile.avatarColor || "#FFDF9B" },
               ]}
             >
-              <Text style={styles.avatarEmoji}>{profile.avatarIcon || "🦁"}</Text>
-              <View style={styles.avatarMiniBadge}>
-                <Sparkles size={10} color="#765900" />
-              </View>
+              <Text style={styles.avatarEmoji}>
+                {profile.avatarIcon || "🦁"}
+              </Text>
             </View>
-
             <View style={styles.profileTextGroup}>
               <View style={styles.nameRow}>
                 <Text style={styles.profileName} numberOfLines={1}>
                   {profile.name}
                 </Text>
-                <View style={styles.gradeBadge}>
-                  <Text style={styles.gradeBadgeText}>
-                    {isParent ? "Phụ huynh" : profile.grade || "Lớp 1"}
-                  </Text>
-                </View>
               </View>
-              <Text style={styles.roleSubtext}>
-                {isParent ? "Quản lý học tập" : "Học viên nhí ✨"}
-              </Text>
             </View>
-          </TouchableOpacity>
+          </View>
 
           {/* Right: Gold Stars & Controls */}
           <View style={styles.headerRightControls}>
@@ -278,9 +282,7 @@ export default function AchievementsRoute() {
             {/* Speech Bubble from Bubu */}
             <View style={styles.speechBubble}>
               <View style={styles.speechTextGroup}>
-                <Text style={styles.speechTitle}>
-                  {profile.name} ơi! ✨
-                </Text>
+                <Text style={styles.speechTitle}>{profile.name} ơi! ✨</Text>
                 <Text style={styles.speechSubtitle}>
                   Cùng ngắm những huy hiệu lấp lánh bé đã thu thập được nhé!
                 </Text>
@@ -320,7 +322,9 @@ export default function AchievementsRoute() {
         <View style={styles.statsSummaryRow}>
           {/* Token 1: Badges */}
           <View style={styles.statTokenCard}>
-            <View style={[styles.statTokenIconWrap, { backgroundColor: "#FFDF9B" }]}>
+            <View
+              style={[styles.statTokenIconWrap, { backgroundColor: "#FFDF9B" }]}
+            >
               <Trophy size={18} color="#251A00" />
             </View>
             <Text style={styles.statTokenLabel}>Huy hiệu</Text>
@@ -329,7 +333,9 @@ export default function AchievementsRoute() {
 
           {/* Token 2: Stars */}
           <View style={styles.statTokenCard}>
-            <View style={[styles.statTokenIconWrap, { backgroundColor: "#FFD167" }]}>
+            <View
+              style={[styles.statTokenIconWrap, { backgroundColor: "#FFD167" }]}
+            >
               <Star size={18} color="#765900" fill="#765900" />
             </View>
             <Text style={styles.statTokenLabel}>Ngôi sao</Text>
@@ -338,7 +344,9 @@ export default function AchievementsRoute() {
 
           {/* Token 3: Stickers */}
           <View style={styles.statTokenCard}>
-            <View style={[styles.statTokenIconWrap, { backgroundColor: "#FFDAD8" }]}>
+            <View
+              style={[styles.statTokenIconWrap, { backgroundColor: "#FFDAD8" }]}
+            >
               <Heart size={18} color="#AE2F34" fill="#AE2F34" />
             </View>
             <Text style={styles.statTokenLabel}>Bạn nhỏ</Text>
@@ -350,7 +358,12 @@ export default function AchievementsRoute() {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeadingRow}>
             <View style={styles.headingLeftGroup}>
-              <View style={[styles.headingIndicator, { backgroundColor: "#4DA8DA" }]} />
+              <View
+                style={[
+                  styles.headingIndicator,
+                  { backgroundColor: "#4DA8DA" },
+                ]}
+              />
               <Text style={styles.sectionMainTitle}>Huy hiệu toán học</Text>
             </View>
             <View style={[styles.countPill, { backgroundColor: "#C6E7FF" }]}>
@@ -445,7 +458,12 @@ export default function AchievementsRoute() {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeadingRow}>
             <View style={styles.headingLeftGroup}>
-              <View style={[styles.headingIndicator, { backgroundColor: "#FF7372" }]} />
+              <View
+                style={[
+                  styles.headingIndicator,
+                  { backgroundColor: "#FF7372" },
+                ]}
+              />
               <Text style={styles.sectionMainTitle}>Bạn nhỏ đồng hành</Text>
             </View>
             <View style={[styles.countPill, { backgroundColor: "#FFDAD8" }]}>
@@ -470,7 +488,10 @@ export default function AchievementsRoute() {
                 key={sticker.id}
                 style={[
                   styles.stickerCard3D,
-                  !sticker.isUnlocked && { opacity: 0.65, backgroundColor: "#F8FAFC" },
+                  !sticker.isUnlocked && {
+                    opacity: 0.65,
+                    backgroundColor: "#F8FAFC",
+                  },
                 ]}
                 activeOpacity={0.85}
                 onPress={() => speakGreeting(sticker.soundText)}
