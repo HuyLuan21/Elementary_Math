@@ -47,15 +47,6 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
       borderColor: '#FEF3C7',
       onPress: () => onNavigateTab('curriculum'),
     },
-    {
-      title: 'Huy hiệu trong hệ thống',
-      value: (metrics.totalBadges || 0).toLocaleString('vi-VN'),
-      caption: `${(metrics.completedLessonsTotal || 0).toLocaleString('vi-VN')} bài học đã nộp`,
-      icon: <Award size={22} color="#9333EA" />,
-      bgColor: '#FAF5FF',
-      borderColor: '#F3E8FF',
-      onPress: () => onNavigateTab('badges'),
-    },
   ];
 
   return (
@@ -101,17 +92,6 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
             </View>
             <Text style={styles.quickBtnTitle}>Quản lý nội dung học</Text>
             <Text style={styles.quickBtnSub}>Soạn chương, bài học & câu hỏi</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => onNavigateTab('badges')}
-          >
-            <View style={[styles.quickIconCircle, { backgroundColor: '#FAF5FF' }]}>
-              <Award size={20} color="#9333EA" />
-            </View>
-            <Text style={styles.quickBtnTitle}>Quản lý huy hiệu</Text>
-            <Text style={styles.quickBtnSub}>Thiết lập danh hiệu & sao</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

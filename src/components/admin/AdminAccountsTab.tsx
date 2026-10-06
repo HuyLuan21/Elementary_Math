@@ -380,7 +380,7 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
                           onPress={() => openProfilesDetail(user)}
                         >
                           <Text style={styles.profileBadgeBtnText}>
-                            👶 {user.profiles.length.toLocaleString('vi-VN')} bé
+                            👶 {(user.profiles?.length || 0).toLocaleString('vi-VN')} bé
                           </Text>
                           <Eye size={13} color="#2563EB" />
                         </TouchableOpacity>
@@ -571,7 +571,7 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
             </View>
 
             <ScrollView style={styles.modalContent}>
-              {selectedUser?.profiles.length === 0 ? (
+              {(selectedUser?.profiles?.length || 0) === 0 ? (
                 <View style={styles.emptyProfiles}>
                   <Text style={styles.emptyProfilesText}>
                     Phụ huynh này chưa tạo hồ sơ bé nào.
@@ -579,7 +579,7 @@ export const AdminAccountsTab: React.FC<AdminAccountsTabProps> = ({
                 </View>
               ) : (
                 <View style={styles.profilesGrid}>
-                  {selectedUser?.profiles.map((child, index) => {
+                  {(selectedUser?.profiles || []).map((child, index) => {
                     const avatar = resolveChildAvatar(child.avatarIcon, index);
 
                     return (

@@ -298,7 +298,7 @@ export const AdminCurriculumTab: React.FC<AdminCurriculumTabProps> = ({
                         <Text style={styles.chapterTitle}>{chapter.title}</Text>
                         <View style={styles.lessonCountBadge}>
                           <Text style={styles.lessonCountText}>
-                            {chapter.lessons.length.toLocaleString('vi-VN')} bài học
+                            {(chapter.lessons?.length || 0).toLocaleString('vi-VN')} bài học
                           </Text>
                         </View>
                       </View>
@@ -353,7 +353,7 @@ export const AdminCurriculumTab: React.FC<AdminCurriculumTabProps> = ({
                       </TouchableOpacity>
                     </View>
 
-                    {chapter.lessons.length === 0 ? (
+                    {(chapter.lessons?.length || 0) === 0 ? (
                       <View style={styles.emptyLessonsBox}>
                         <Text style={styles.emptyLessonsText}>
                           Chưa có bài học nào trong chương này.
@@ -361,7 +361,7 @@ export const AdminCurriculumTab: React.FC<AdminCurriculumTabProps> = ({
                       </View>
                     ) : (
                       <View style={styles.lessonGrid}>
-                        {chapter.lessons.map((lesson) => {
+                        {(chapter.lessons || []).map((lesson) => {
                           const qCount = lesson.questions
                             ? lesson.questions.length
                             : lesson.questionCount || 0;

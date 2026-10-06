@@ -73,6 +73,7 @@ export interface AdminChapter {
   description: string;
   grade: number;
   orderNumber: number;
+  rewardBadgeId?: string | null;
   status: 'published' | 'draft';
   lessons: AdminLesson[];
 }
@@ -82,12 +83,15 @@ export interface AdminBadge {
   name: string;
   description: string;
   icon: string;
-  category: 'lesson' | 'streak' | 'stars' | 'special';
+  category: 'chapter' | 'special' | 'streak' | 'lesson';
+  conditionType?: 'chapter_completed' | 'first_lesson' | 'streak' | 'lessons_completed';
+  chapterId?: string | null;
+  chapterTitle?: string | null;
   requiredCount: number;
-  requiredMetric: 'completed_lessons' | 'learning_days' | 'total_stars' | 'perfect_score';
+  requiredMetric?: 'completed_lessons' | 'learning_days' | 'total_stars' | 'perfect_score' | 'chapter';
   rewardPoints: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
   unlockedCount: number;
 }
 
-export type AdminTab = 'overview' | 'accounts' | 'curriculum' | 'badges' | 'settings';
+export type AdminTab = 'overview' | 'accounts' | 'curriculum' | 'settings';

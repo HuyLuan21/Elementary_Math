@@ -10,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import {
-  AdminBadge,
   AdminChapter,
   AdminLesson,
   AdminMetricOverview,
@@ -23,7 +22,6 @@ import { AdminHeader } from '../../src/components/admin/AdminHeader';
 import { AdminOverviewTab } from '../../src/components/admin/AdminOverviewTab';
 import { AdminAccountsTab } from '../../src/components/admin/AdminAccountsTab';
 import { AdminCurriculumTab } from '../../src/components/admin/AdminCurriculumTab';
-import { AdminBadgesTab } from '../../src/components/admin/AdminBadgesTab';
 
 export default function AdminDashboardRoute() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -44,20 +42,17 @@ export default function AdminDashboardRoute() {
 
   const [accounts, setAccounts] = useState<AdminUserAccount[]>([]);
   const [chapters, setChapters] = useState<AdminChapter[]>([]);
-  const [badges, setBadges] = useState<AdminBadge[]>([]);
 
   const loadAllData = async () => {
     try {
-      const [m, accountsRes, c, b] = await Promise.all([
+      const [m, accountsRes, c] = await Promise.all([
         adminApi.getMetrics(),
         adminApi.getAccounts({ page: 1, limit: 50 }),
         adminApi.getChapters(),
-        adminApi.getBadges(),
       ]);
       setMetrics(m);
       setAccounts(Array.isArray(accountsRes) ? accountsRes : accountsRes.data || []);
       setChapters(c);
-      setBadges(b);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải dữ liệu quản trị.';
       Alert.alert('Lỗi', msg);
@@ -102,8 +97,12 @@ export default function AdminDashboardRoute() {
     setChapters((prev) => {
       const exists = prev.some((c) => c.id === saved.id);
       return exists
-        ? prev.map((c) => (c.id === saved.id ? saved : c))
-        : [...prev, saved];
+        ? prev.map((c) =>
+            c.id === saved.id
+              ? { ...c, ...saved, lessons: c.lessons || saved.lessons || [] }
+              : c
+          )
+        : [...prev, { ...saved, lessons: saved.lessons || [] }];
     });
     const m = await adminApi.getMetrics();
     setMetrics(m);
@@ -124,10 +123,11 @@ export default function AdminDashboardRoute() {
     setChapters((prev) =>
       prev.map((c) => {
         if (c.id !== chapterId) return c;
-        const exists = c.lessons.some((l) => l.id === saved.id);
+        const currentLessons = c.lessons || [];
+        const exists = currentLessons.some((l) => l.id === saved.id);
         const nextLessons = exists
-          ? c.lessons.map((l) => (l.id === saved.id ? saved : l))
-          : [...c.lessons, saved];
+          ? currentLessons.map((l) => (l.id === saved.id ? { ...l, ...saved } : l))
+          : [...currentLessons, saved];
         return { ...c, lessons: nextLessons };
       })
     );
@@ -140,7 +140,7 @@ export default function AdminDashboardRoute() {
     setChapters((prev) =>
       prev.map((c) =>
         c.id === chapterId
-          ? { ...c, lessons: c.lessons.filter((l) => l.id !== lessonId) }
+          ? { ...c, lessons: (c.lessons || []).filter((l) => l.id !== lessonId) }
           : c
       )
     );
@@ -164,26 +164,6 @@ export default function AdminDashboardRoute() {
     setMetrics(m);
   };
 
-  // Badge Handlers
-  const handleSaveBadge = async (badgeData: Partial<AdminBadge>) => {
-    const saved = await adminApi.saveBadge(badgeData);
-    setBadges((prev) => {
-      const exists = prev.some((b) => b.id === saved.id);
-      return exists
-        ? prev.map((b) => (b.id === saved.id ? saved : b))
-        : [...prev, saved];
-    });
-    const m = await adminApi.getMetrics();
-    setMetrics(m);
-  };
-
-  const handleDeleteBadge = async (badgeId: string) => {
-    await adminApi.deleteBadge(badgeId);
-    setBadges((prev) => prev.filter((b) => b.id !== badgeId));
-    const m = await adminApi.getMetrics();
-    setMetrics(m);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.layoutContainer}>
@@ -194,7 +174,6 @@ export default function AdminDashboardRoute() {
           metrics={{
             totalAccounts: accounts.length,
             totalLessons: metrics.totalLessons,
-            totalBadges: badges.length,
           }}
         />
 
@@ -245,13 +224,6 @@ export default function AdminDashboardRoute() {
                     onDeleteLesson={handleDeleteLesson}
                     onSaveQuestion={handleSaveQuestion}
                     onDeleteQuestion={handleDeleteQuestion}
-                  />
-                )}
-                {activeTab === 'badges' && (
-                  <AdminBadgesTab
-                    badges={badges}
-                    onSaveBadge={handleSaveBadge}
-                    onDeleteBadge={handleDeleteBadge}
                   />
                 )}
               </>

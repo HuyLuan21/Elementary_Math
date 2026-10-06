@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  Award,
   BookOpen,
   ChevronRight,
   Home,
@@ -19,7 +18,6 @@ interface AdminSidebarProps {
   metrics: {
     totalAccounts: number;
     totalLessons: number;
-    totalBadges: number;
   };
 }
 
@@ -67,17 +65,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         />
       ),
       badge: metrics.totalLessons,
-    },
-    {
-      id: 'badges',
-      label: 'Huy hiệu & Thưởng',
-      icon: (
-        <Award
-          size={19}
-          color={activeTab === 'badges' ? '#2563EB' : '#64748B'}
-        />
-      ),
-      badge: metrics.totalBadges,
     },
   ];
 

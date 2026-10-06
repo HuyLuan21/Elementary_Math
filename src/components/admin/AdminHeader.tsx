@@ -24,10 +24,6 @@ const TAB_TITLES: Record<AdminTab, { title: string; subtitle: string }> = {
     title: 'Quản lý Nội dung học tập',
     subtitle: 'Soạn thảo Chương, Bài học, Câu hỏi và Bài tập tương tác',
   },
-  badges: {
-    title: 'Quản lý Huy hiệu & Phần thưởng',
-    subtitle: 'Thiết lập danh hiệu, tiêu chí mở khóa và điểm thưởng cho bé',
-  },
   settings: {
     title: 'Cài đặt hệ thống',
     subtitle: 'Cấu hình chung và quyền hạn quản trị',

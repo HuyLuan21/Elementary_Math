@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, KeyRound, LogOut, RefreshCw, Shield, Users } from "lucide-react-native";
+import { ArrowLeft, KeyRound, LogOut, RefreshCw, Users } from "lucide-react-native";
 import { useAuth } from "../../../src/context/AuthContext";
 import { parentApi } from "../../../src/services/parentApi";
 import { ParentOverviewProfile } from "../../../src/types/parentReport";
@@ -89,15 +89,6 @@ export default function ParentOverviewRoute() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Trang Quản trị"
-              onPress={() => router.push("/admin" as any)}
-              style={styles.adminPortalButton}
-            >
-              <Shield size={15} color="#2563EB" />
-              <Text style={styles.adminPortalText}>Quản trị</Text>
-            </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Đổi mã PIN"
@@ -233,22 +224,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  adminPortalButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-  },
-  adminPortalText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#2563EB",
   },
   changePinButton: {
     flexDirection: "row",

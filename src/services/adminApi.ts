@@ -1,6 +1,5 @@
 import { apiClient } from './axios';
 import {
-  AdminBadge,
   AdminChapter,
   AdminLesson,
   AdminMetricOverview,
@@ -127,31 +126,5 @@ export const adminApi = {
     await apiClient.delete(
       `/admin/lessons/${encodeURIComponent(lessonId)}/questions/${encodeURIComponent(questionId)}`
     );
-  },
-
-  // 5. Badges
-  getBadges: async (): Promise<AdminBadge[]> => {
-    const response = await apiClient.get<{ data: AdminBadge[] }>('/admin/badges');
-    return response.data.data;
-  },
-
-  saveBadge: async (badge: Partial<AdminBadge>): Promise<AdminBadge> => {
-    if (badge.id) {
-      const response = await apiClient.put<{ data: AdminBadge }>(
-        `/admin/badges/${encodeURIComponent(badge.id)}`,
-        badge
-      );
-      return response.data.data;
-    } else {
-      const response = await apiClient.post<{ data: AdminBadge }>(
-        '/admin/badges',
-        badge
-      );
-      return response.data.data;
-    }
-  },
-
-  deleteBadge: async (badgeId: string): Promise<void> => {
-    await apiClient.delete(`/admin/badges/${encodeURIComponent(badgeId)}`);
   },
 };
