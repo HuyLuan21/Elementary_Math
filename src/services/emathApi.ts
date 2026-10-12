@@ -166,12 +166,19 @@ export const emathApi = {
     return response.data?.data;
   },
 
-  // Nộp kết quả bài làm vào DB
+  // Nộp kết quả bài làm vào DB (kèm thời gian làm bài & chi tiết từng câu)
   submitLesson: async (
     lessonId: string,
     profileId: string,
     correctCount: number,
     totalQuestions: number,
+    durationSeconds: number = 0,
+    answers: Array<{
+      question_id: string;
+      given_answer?: string;
+      is_correct?: boolean;
+      time_spent_sec?: number;
+    }> = [],
     token?: string,
   ): Promise<SubmitLessonResult> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -181,6 +188,8 @@ export const emathApi = {
         profile_id: profileId,
         correct_count: correctCount,
         total_questions: totalQuestions,
+        duration_seconds: durationSeconds,
+        answers,
       },
       { headers },
     );

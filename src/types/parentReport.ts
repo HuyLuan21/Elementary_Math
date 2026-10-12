@@ -83,12 +83,26 @@ export interface StickerReport {
   unlocked_at: string;
 }
 
+export interface LessonAttemptReport {
+  id: string;
+  lesson_id: string;
+  lesson_title: string;
+  correct_count: number;
+  total_questions: number;
+  score: number;
+  stars_earned: number;
+  duration_seconds: number;
+  avg_time_per_question: number;
+  finished_at: string;
+}
+
 export interface ChildReport {
   profile: ChildReportProfile;
   summary: ChildReportSummary;
   chapters: ChapterReport[];
   lessons: LessonReport[];
   recent_activity: RecentActivity[];
+  recent_attempts?: LessonAttemptReport[];
   badges: BadgeReport[];
   stickers: StickerReport[];
 }

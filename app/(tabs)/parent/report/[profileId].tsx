@@ -17,6 +17,7 @@ import {
   ChapterReport,
   LessonReport,
   RecentActivity,
+  LessonAttemptReport,
 } from "../../../../src/types/parentReport";
 
 type ReportState = {
@@ -149,6 +150,15 @@ export default function ChildReportRoute() {
                 ))
               ) : (
                 <EmptyReport message="Chưa có dữ liệu bài học" />
+              )}
+            </ReportSection>
+            <ReportSection title="⏱️ Tốc độ & Lịch sử làm bài">
+              {report.recent_attempts && report.recent_attempts.length ? (
+                report.recent_attempts.map((attempt) => (
+                  <AttemptHistoryCard key={attempt.id} attempt={attempt} />
+                ))
+              ) : (
+                <EmptyReport message="Chưa có lịch sử làm bài" />
               )}
             </ReportSection>
             <ReportSection title="📅 Hoạt động gần đây">
@@ -468,12 +478,92 @@ function AchievementCard({
   );
 }
 
+function AttemptHistoryCard({ attempt }: { attempt: LessonAttemptReport }) {
+  const avg = Number(attempt.avg_time_per_question) || 0;
+  let speedBadge = {
+    emoji: "⚡",
+    label: "Phản xạ rất nhanh",
+    color: "#059669",
+    bg: "#ECFDF5",
+  };
+  if (avg > 15) {
+    speedBadge = {
+      emoji: "🤔",
+      label: "Bé suy nghĩ kỹ / cần thêm thời gian",
+      color: "#D97706",
+      bg: "#FFFBEB",
+    };
+  } else if (avg >= 7) {
+    speedBadge = {
+      emoji: "👍",
+      label: "Tốc độ vừa phải, ổn định",
+      color: "#0284C7",
+      bg: "#F0F9FF",
+    };
+  }
+
+  return (
+    <View style={styles.attemptCard}>
+      <View style={styles.attemptTopRow}>
+        <View style={styles.attemptTitleGroup}>
+          <Text style={styles.attemptLessonTitle} numberOfLines={1}>
+            {attempt.lesson_title}
+          </Text>
+          <Text style={styles.attemptDate}>
+            {formatDateTime(attempt.finished_at)}
+          </Text>
+        </View>
+        <View style={styles.attemptScoreBadge}>
+          <Text style={styles.attemptScoreText}>
+            {attempt.correct_count}/{attempt.total_questions} câu
+          </Text>
+          <Text style={styles.attemptStars}>
+            {"⭐".repeat(attempt.stars_earned || 0)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.attemptDivider} />
+
+      <View style={styles.attemptBottomRow}>
+        <View style={styles.attemptMetricItem}>
+          <Text style={styles.attemptMetricLabel}>Thời gian làm:</Text>
+          <Text style={styles.attemptMetricValue}>
+            ⏱️ {formatDuration(attempt.duration_seconds)}
+          </Text>
+        </View>
+        <View style={styles.attemptMetricItem}>
+          <Text style={styles.attemptMetricLabel}>Tốc độ TB:</Text>
+          <Text style={styles.attemptMetricValue}>
+            🎯 {avg}s / câu
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.attemptSpeedTag, { backgroundColor: speedBadge.bg }]}>
+        <Text style={[styles.attemptSpeedTagText, { color: speedBadge.color }]}>
+          {speedBadge.emoji} {speedBadge.label}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function EmptyReport({ message }: { message: string }) {
   return (
     <View style={styles.emptyCard}>
       <Text style={styles.emptyText}>{message}</Text>
     </View>
   );
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const dateStr = new Intl.DateTimeFormat("vi-VN").format(date);
+  return `${hours}:${minutes} • ${dateStr}`;
 }
 
 function formatDate(value: string): string {
@@ -487,7 +577,7 @@ function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  if (hours === 0) return `${minutes} phút`;
+  if (hours === 0) return `${minutes} phút ${remainingMinutes > 0 ? `${remainingMinutes}s` : ""}`;
   return remainingMinutes
     ? `${hours} giờ ${remainingMinutes} phút`
     : `${hours} giờ`;
@@ -845,5 +935,80 @@ const styles = StyleSheet.create({
     color: "#68737D",
     fontSize: 11.5,
     lineHeight: 16,
+  },
+  // ATTEMPT HISTORY STYLES
+  attemptCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#EAEFF4",
+  },
+  attemptTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  attemptTitleGroup: {
+    flex: 1,
+    marginRight: 10,
+  },
+  attemptLessonTitle: {
+    color: "#303942",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  attemptDate: {
+    color: "#7E8994",
+    fontSize: 11.5,
+    marginTop: 2,
+  },
+  attemptScoreBadge: {
+    alignItems: "flex-end",
+  },
+  attemptScoreText: {
+    color: "#00658D",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  attemptStars: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  attemptDivider: {
+    height: 1,
+    backgroundColor: "#F0F4F8",
+    marginVertical: 10,
+  },
+  attemptBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  attemptMetricItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  attemptMetricLabel: {
+    color: "#6A7580",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  attemptMetricValue: {
+    color: "#303942",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  attemptSpeedTag: {
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    alignSelf: "flex-start",
+  },
+  attemptSpeedTagText: {
+    fontSize: 11.5,
+    fontWeight: "700",
   },
 });

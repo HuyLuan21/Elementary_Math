@@ -142,7 +142,40 @@ const FALLBACK_QUESTIONS: QuestionData[] = [
     correctAnswerId: "3",
     explanation: "Đúng rồi! Có tất cả 3 quả táo đỏ thơm ngon 🍎!",
   },
+  {
+    id: "5",
+    type: "color_choice",
+    questionText: "Bầu trời thường có màu gì vậy bé ☁️?",
+    visualItems: ["☁️"],
+    options: [
+      { id: "blue", label: "Màu xanh dương 🔵", icon: "🔵" },
+      { id: "red", label: "Màu đỏ 🔴", icon: "🔴" },
+      { id: "yellow", label: "Màu vàng 🟡", icon: "🟡" },
+    ],
+    correctAnswerId: "blue",
+    explanation: "Chính xác! Bầu trời cao trong xanh màu xanh dương 🔵!",
+  },
 ];
+
+// Helper đảo mảng ngẫu nhiên (Fisher-Yates shuffle)
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+// Helper đảo câu hỏi và đảo đáp án khi làm bài
+function shuffleLessonQuestions(questionList: QuestionData[]): QuestionData[] {
+  if (!questionList || questionList.length === 0) return [];
+  return shuffleArray(questionList).map((q) => ({
+    ...q,
+    options:
+      q.options && q.options.length > 0 ? shuffleArray(q.options) : q.options,
+  }));
+}
 
 // Helper chuyển đổi văn bản sang câu đọc tự nhiên cho trẻ nhỏ
 const cleanTextForSpeech = (text: string): string => {
@@ -230,6 +263,19 @@ export default function LessonScreen() {
     }
   };
 
+  // Timing & per-question logging for parent reports
+  const lessonStartTimeRef = useRef<number>(Date.now());
+  const questionStartTimeRef = useRef<number>(Date.now());
+  const answersLogRef = useRef<
+    Array<{
+      question_id: string;
+      given_answer?: string;
+      is_correct?: boolean;
+      time_spent_sec?: number;
+    }>
+  >([]);
+  const [completionDurationSec, setCompletionDurationSec] = useState(0);
+
   // Animation values
   const heartScaleAnim = useRef(new Animated.Value(1)).current;
   const bottomSheetAnim = useRef(new Animated.Value(200)).current;
@@ -242,10 +288,10 @@ export default function LessonScreen() {
     };
   }, []);
 
-  // Tải danh sách câu hỏi từ Backend Database
+  // Tải danh sách câu hỏi từ Backend Database (kèm cơ chế đảo câu, đảo đáp án)
   const loadLessonData = useCallback(async () => {
     if (!id) {
-      setQuestions(FALLBACK_QUESTIONS);
+      setQuestions(shuffleLessonQuestions(FALLBACK_QUESTIONS));
       setLoading(false);
       return;
     }
@@ -279,11 +325,16 @@ export default function LessonScreen() {
       );
 
       if (data && data.questions && data.questions.length > 0) {
-        setQuestions(data.questions);
+        setQuestions(shuffleLessonQuestions(data.questions));
         if (data.title) setLessonTitle(data.title);
       } else {
-        setQuestions(FALLBACK_QUESTIONS);
+        setQuestions(shuffleLessonQuestions(FALLBACK_QUESTIONS));
       }
+      // Khởi động đồng hồ bấm giờ bài học & câu hỏi đầu tiên
+      lessonStartTimeRef.current = Date.now();
+      questionStartTimeRef.current = Date.now();
+      answersLogRef.current = [];
+      setCompletionDurationSec(0);
     } catch (err: any) {
       const responseData = err?.response?.data;
       if (err?.response?.status === 403 || responseData?.isLocked) {
@@ -306,6 +357,24 @@ export default function LessonScreen() {
       setLoading(false);
     }
   }, [id, authToken, activeProfile?.id]);
+
+  const handleRestart = () => {
+    stopSpeech();
+    setCurrentIndex(0);
+    setSelectedOptionId(null);
+    setIsAnswerChecked(false);
+    setIsCorrect(false);
+    setCorrectAnswersCount(0);
+    setHearts(5);
+    setEarnedXp(0);
+    setIsCompleted(false);
+    setAwardedSticker(null);
+    lessonStartTimeRef.current = Date.now();
+    questionStartTimeRef.current = Date.now();
+    answersLogRef.current = [];
+    setCompletionDurationSec(0);
+    loadLessonData();
+  };
 
   useEffect(() => {
     loadLessonData();
@@ -379,6 +448,18 @@ export default function LessonScreen() {
     setIsCorrect(correct);
     setIsAnswerChecked(true);
 
+    // Ghi nhận log thời gian làm câu hỏi này
+    const timeSpentSec = Math.max(
+      1,
+      Math.round((Date.now() - questionStartTimeRef.current) / 1000),
+    );
+    answersLogRef.current.push({
+      question_id: currentQuestion.id,
+      given_answer: selectedOptionId,
+      is_correct: correct,
+      time_spent_sec: timeSpentSec,
+    });
+
     if (correct) {
       stopSpeech();
       playSoundEffect("correct");
@@ -424,6 +505,7 @@ export default function LessonScreen() {
 
       if (currentIndex < questions.length - 1) {
         setCurrentIndex((prev) => prev + 1);
+        questionStartTimeRef.current = Date.now();
       } else {
         stopSpeech();
         playSoundEffect("complete");
@@ -433,6 +515,12 @@ export default function LessonScreen() {
           duration: 350,
           useNativeDriver: false,
         }).start();
+
+        const totalDurationSec = Math.max(
+          1,
+          Math.round((Date.now() - lessonStartTimeRef.current) / 1000),
+        );
+        setCompletionDurationSec(totalDurationSec);
 
         // Gửi kết quả về Backend Database để lưu trữ & mở khóa bài kế tiếp
         let targetProfileId = activeProfile?.id;
@@ -460,6 +548,8 @@ export default function LessonScreen() {
               targetProfileId,
               correctAnswersCount,
               questions.length,
+              totalDurationSec,
+              answersLogRef.current,
               targetToken || undefined,
             );
             if (submitResult?.awardedSticker) {
@@ -1131,7 +1221,17 @@ export default function LessonScreen() {
                     <Text style={styles.feedbackSub}>
                       {isCorrect
                         ? "+10 XP Điểm thưởng"
-                        : `Đáp án đúng là: ${currentQuestion.correctAnswerId}`}
+                        : `Đáp án đúng là: ${
+                            currentQuestion.options.find(
+                              (o) =>
+                                String(o.id).trim().toLowerCase() ===
+                                String(
+                                  currentQuestion.correctAnswerId,
+                                )
+                                  .trim()
+                                  .toLowerCase(),
+                            )?.label || currentQuestion.correctAnswerId
+                          }`}
                     </Text>
                   </View>
                 </View>
@@ -1259,9 +1359,30 @@ export default function LessonScreen() {
                 <Text style={styles.victoryStatNumber}>{starsEarned}/3</Text>
                 <Text style={styles.victoryStatLabel}>Ngôi sao</Text>
               </View>
+
+              {/* Time Spent */}
+              <View style={styles.victoryStatCard}>
+                <Text style={styles.victoryStatEmoji}>⏱️</Text>
+                <Text style={styles.victoryStatNumber}>
+                  {completionDurationSec > 60
+                    ? `${Math.floor(completionDurationSec / 60)}m${completionDurationSec % 60}s`
+                    : `${completionDurationSec}s`}
+                </Text>
+                <Text style={styles.victoryStatLabel}>Thời gian</Text>
+              </View>
             </View>
 
-            {/* Continue button */}
+            {/* Action buttons */}
+            <TouchableOpacity
+              style={styles.victoryReplayBtn}
+              onPress={handleRestart}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.victoryReplayBtnText}>
+                LÀM LẠI (ĐẢO CÂU MỚI) 🔄
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.victoryFinishBtn}
               onPress={() => {
@@ -2151,14 +2272,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    gap: 10,
+    gap: 6,
     marginBottom: 28,
   },
   victoryStatCard: {
     flex: 1,
     backgroundColor: "#FDF7FF",
-    borderRadius: 20,
-    padding: 12,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#EEE4FF",
@@ -2176,6 +2298,25 @@ const styles = StyleSheet.create({
     color: "#6F7880",
     fontSize: 11,
     fontWeight: "600",
+  },
+  victoryReplayBtn: {
+    width: "100%",
+    backgroundColor: "#F5F3FF",
+    borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: "#DDD6FE",
+    borderBottomWidth: 5,
+    borderBottomColor: "#C4B5FD",
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  victoryReplayBtnText: {
+    color: "#6D28D9",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 0.3,
   },
   victoryFinishBtn: {
     width: "100%",
