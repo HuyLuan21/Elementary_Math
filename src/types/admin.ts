@@ -7,6 +7,10 @@ export interface AdminMetricOverview {
   totalBadges: number;
   activeToday: number;
   completedLessonsTotal: number;
+  totalAttempts?: number;
+  accuracyRate?: number;
+  avgDurationSeconds?: number;
+  totalDurationSeconds?: number;
 }
 
 export interface AdminPagination {

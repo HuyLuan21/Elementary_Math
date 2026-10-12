@@ -200,13 +200,31 @@ export const AdminCurriculumTab: React.FC<AdminCurriculumTabProps> = ({
   const openEditQuestionModal = (q: AdminQuestion) => {
     setEditingQuestion(q);
     const opts = q.options || [];
+
+    // Tự động nhận diện chữ cái đáp án đúng (A, B, C, D)
+    let correctLetter = 'A';
+    const letters = ['A', 'B', 'C', 'D'];
+    const rawAns = (q.correctAnswer || '').trim().toUpperCase();
+    if (letters.includes(rawAns)) {
+      correctLetter = rawAns;
+    } else {
+      const matchIdx = opts.findIndex(
+        (o) =>
+          String(o).trim().toLowerCase() ===
+          (q.correctAnswer || '').trim().toLowerCase(),
+      );
+      if (matchIdx >= 0 && matchIdx < 4) {
+        correctLetter = letters[matchIdx];
+      }
+    }
+
     setQuestionForm({
       questionText: q.questionText,
       optionA: opts[0] || '',
       optionB: opts[1] || '',
       optionC: opts[2] || '',
       optionD: opts[3] || '',
-      correctAnswer: q.correctAnswer || 'A',
+      correctAnswer: correctLetter,
     });
     setQuestionFormModalVisible(true);
   };

@@ -38,6 +38,10 @@ export default function AdminDashboardRoute() {
     totalBadges: 0,
     activeToday: 0,
     completedLessonsTotal: 0,
+    totalAttempts: 0,
+    accuracyRate: 0,
+    avgDurationSeconds: 0,
+    totalDurationSeconds: 0,
   });
 
   const [accounts, setAccounts] = useState<AdminUserAccount[]>([]);

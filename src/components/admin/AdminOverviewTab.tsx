@@ -3,7 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   Award,
   BookOpen,
+  Clock,
   Sparkles,
+  Target,
   TrendingUp,
   UserCheck,
   Users,
@@ -14,6 +16,22 @@ interface AdminOverviewTabProps {
   metrics: AdminMetricOverview;
   onNavigateTab: (tab: AdminTab) => void;
 }
+
+const formatDuration = (seconds: number) => {
+  if (!seconds || seconds <= 0) return '0s / bài';
+  if (seconds < 60) return `${seconds}s / bài`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}p ${s}s / bài` : `${m} phút / bài`;
+};
+
+const formatTotalHours = (seconds: number) => {
+  if (!seconds || seconds <= 0) return '0 phút';
+  const m = Math.round(seconds / 60);
+  if (m < 60) return `${m} phút`;
+  const h = (seconds / 3600).toFixed(1);
+  return `${h} giờ`;
+};
 
 export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
   metrics,
@@ -45,6 +63,24 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
       icon: <BookOpen size={22} color="#D97706" />,
       bgColor: '#FFFBEB',
       borderColor: '#FEF3C7',
+      onPress: () => onNavigateTab('curriculum'),
+    },
+    {
+      title: 'Tỷ lệ chính xác TB',
+      value: `${metrics.accuracyRate ?? 0}%`,
+      caption: `${(metrics.totalAttempts || 0).toLocaleString('vi-VN')} lượt nộp bài`,
+      icon: <Target size={22} color="#7C3AED" />,
+      bgColor: '#F5F3FF',
+      borderColor: '#DDD6FE',
+      onPress: () => onNavigateTab('curriculum'),
+    },
+    {
+      title: 'Thời gian làm bài TB',
+      value: formatDuration(metrics.avgDurationSeconds || 0),
+      caption: `Tổng giờ học: ${formatTotalHours(metrics.totalDurationSeconds || 0)}`,
+      icon: <Clock size={22} color="#0284C7" />,
+      bgColor: '#F0F9FF',
+      borderColor: '#BAE6FD',
       onPress: () => onNavigateTab('curriculum'),
     },
   ];

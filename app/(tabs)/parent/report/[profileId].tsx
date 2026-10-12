@@ -280,46 +280,143 @@ function ParentAdviceSection({ report }: { report: ChildReport }) {
   const completedCount = report.summary.completed_lessons;
   const totalStars = report.summary.total_stars;
   const name = report.profile.display_name || "Bé";
+  const attempts = report.recent_attempts || [];
+  const lessons = report.lessons || [];
+  const recentActivity = report.recent_activity || [];
 
   const adviceList: Array<{ icon: string; title: string; desc: string }> = [];
 
+  // 1. Phân tích Tốc độ & Độ chính xác từ các lượt làm bài gần nhất (recent_attempts)
+  if (attempts.length > 0) {
+    const validSpeedAttempts = attempts.filter(
+      (a) => Number(a.avg_time_per_question) > 0,
+    );
+    const avgSpeed =
+      validSpeedAttempts.length > 0
+        ? validSpeedAttempts.reduce(
+            (sum, a) => sum + Number(a.avg_time_per_question),
+            0,
+          ) / validSpeedAttempts.length
+        : 0;
+
+    const totalQuestions = attempts.reduce(
+      (sum, a) => sum + Number(a.total_questions || 0),
+      0,
+    );
+    const totalCorrect = attempts.reduce(
+      (sum, a) => sum + Number(a.correct_count || 0),
+      0,
+    );
+    const accuracy =
+      totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+
+    if (avgSpeed > 0 && avgSpeed < 5 && accuracy < 75) {
+      // Làm quá nhanh nhưng sai nhiều -> chọn ẩu
+      adviceList.push({
+        icon: "⚠️",
+        title: "Tốc độ: Bé có xu hướng làm vội",
+        desc: `Thời gian trả lời trung bình là ${avgSpeed.toFixed(1)}s/câu nhưng tỷ lệ đúng chỉ đạt ${Math.round(accuracy)}%. Ba mẹ nên ngồi cạnh nhắc bé đếm kỹ hình minh họa và dừng lại 2-3 giây trước khi bấm chọn nhé!`,
+      });
+    } else if (avgSpeed > 0 && avgSpeed < 7 && accuracy >= 80) {
+      // Nhanh và đúng cao -> phản xạ cực tốt
+      adviceList.push({
+        icon: "⚡",
+        title: "Phản xạ nhanh & nắm chắc bài",
+        desc: `${name} phản xạ rất nhạy bén với trung bình ${avgSpeed.toFixed(1)}s/câu và đạt độ chính xác ấn tượng ${Math.round(accuracy)}%. Bé đang tiếp thu rất nhanh các bài học này!`,
+      });
+    } else if (avgSpeed > 16) {
+      // Làm câu hỏi chậm (> 16s/câu)
+      adviceList.push({
+        icon: "🤔",
+        title: "Tốc độ: Bé đang cần thêm thời gian quan sát",
+        desc: `Thời gian trả lời trung bình là ${avgSpeed.toFixed(1)}s/câu. Với các bài so sánh hoặc đếm số lượng nhiều, ba mẹ có thể dùng que tính hoặc đồ vật thật để bé dễ hình dung và tự tin hơn.`,
+      });
+    } else if (avgSpeed > 0) {
+      adviceList.push({
+        icon: "👍",
+        title: "Nhịp độ làm bài ổn định",
+        desc: `${name} duy trì tốc độ làm bài vừa phải (${avgSpeed.toFixed(1)}s/câu) với tỷ lệ đúng ${Math.round(accuracy)}%. Đây là phong độ rất tốt cho lứa tuổi mầm non.`,
+      });
+    }
+  }
+
+  // 2. Phân tích Điểm mạnh & Điểm cần ôn luyện từ danh sách bài học (lessons)
+  const playedLessons = lessons.filter((l) => l.attempts_count > 0);
+  const struggling = playedLessons.filter(
+    (l) => Number(l.best_score) < 7 || l.stars < 2,
+  );
+  const mastered = playedLessons.filter(
+    (l) => l.stars === 3 || Number(l.best_score) >= 9,
+  );
+
+  if (struggling.length > 0) {
+    const targetLesson = struggling[0];
+    adviceList.push({
+      icon: "🎯",
+      title: `Gợi ý ôn tập: "${targetLesson.title}"`,
+      desc: `Bài học này bé đạt ${Number(targetLesson.best_score).toFixed(0)}/10 điểm (${targetLesson.stars} ⭐). Ba mẹ có thể mở lại bài này để cùng bé luyện tập thêm nhé!`,
+    });
+  } else if (mastered.length > 0) {
+    const targetLesson = mastered[0];
+    adviceList.push({
+      icon: "🌟",
+      title: `Thế mạnh nổi bật: "${targetLesson.title}"`,
+      desc: `Bé đã chinh phục trọn vẹn 3 ⭐ ở bài này. Bé nhận diện và hiểu khái niệm rất xuất sắc!`,
+    });
+  }
+
+  // 3. Phân tích Thời lượng học trong ngày gần nhất (screen time)
+  const latestActivity = recentActivity[0];
+  const todaySeconds = latestActivity?.total_seconds || 0;
+  if (todaySeconds > 1800) {
+    adviceList.push({
+      icon: "🛑",
+      title: `Thời lượng hôm nay hơi nhiều (${Math.round(todaySeconds / 60)} phút)`,
+      desc: `Bé đã học hơn 30 phút trong ngày. Ba mẹ nên nhắc bé nghỉ giải lao 10 phút, nhìn ra xa hoặc vận động nhẹ để bảo vệ mắt nhé!`,
+    });
+  } else if (todaySeconds > 300) {
+    adviceList.push({
+      icon: "⏱️",
+      title: `Thời lượng học hợp lý (${Math.round(todaySeconds / 60)} phút)`,
+      desc: `Thời gian học trong ngày rất vừa vặn với độ tuổi mầm non (15-20 phút), giúp bé duy trì sự tập trung cao mà không bị mệt mỏi.`,
+    });
+  }
+
+  // 4. Phân tích Thói quen và Tiến độ hành trình
   if (completedCount === 0) {
     adviceList.push({
       icon: "🌱",
       title: "Bắt đầu hành trình cùng bé",
-      desc: `${name} đang ở vạch xuất phát. Ba mẹ hãy dành 10-15 phút mỗi tối ngồi cùng bé để khuyến khích sự tò mò và tạo hứng thú học tập nhé!`,
+      desc: `${name} đang ở vạch xuất phát. Ba mẹ hãy dành 10-15 phút mỗi tối ngồi cùng bé để khơi gợi niềm yêu thích môn Toán nhé!`,
     });
-  } else if (completedCount < 5) {
+  } else if (report.summary.learning_days >= 3) {
     adviceList.push({
-      icon: "🌟",
-      title: "Xây dựng thói quen hàng ngày",
-      desc: `${name} đã hoàn thành ${completedCount} bài học rất tốt! Ba mẹ hãy duy trì thói quen học 1 bài mỗi ngày và khen thưởng bé bằng những lời động viên tích cực.`,
+      icon: "🔥",
+      title: `Duy trì học đều đặn (${report.summary.learning_days} ngày)`,
+      desc: `${name} đang hình thành thói quen học tập rất tốt! Ba mẹ nhớ dành những lời khen ngợi cụ thể để tiếp thêm động lực cho bé.`,
     });
   } else {
     adviceList.push({
       icon: "🏆",
-      title: "Tiến bộ vượt bậc",
-      desc: `${name} đã hoàn thành ${completedCount} bài học và thu thập được ${totalStars} ⭐! Ba mẹ có thể mở rộng bài học bằng cách đố bé đếm và so sánh đồ vật thực tế trong nhà.`,
+      title: `Đã hoàn thành ${completedCount} bài học`,
+      desc: `${name} đã thu thập được ${totalStars} ⭐. Ba mẹ hãy khuyến khích bé hoàn thành nốt các bài còn lại trong chặng nhé!`,
     });
   }
 
-  adviceList.push({
-    icon: "⏱️",
-    title: "Thời lượng học lý tưởng",
-    desc: "Thời gian vàng cho bé mầm non là 15-20 phút/ngày. Tránh để bé nhìn màn hình quá lâu để bảo vệ mắt và giữ cho não bộ luôn thư giãn.",
-  });
-
-  adviceList.push({
-    icon: "💬",
-    title: "Tương tác thực tế",
-    desc: "Khi cùng bé học các bài hình học và màu sắc, ba mẹ hãy hỏi bé: 'Quả dưa hấu hình gì?', 'Chiếc áo này màu gì?' để tăng khả năng quan sát.",
-  });
+  // Luôn đảm bảo có tối thiểu 2 lời khuyên nếu bé chưa có nhiều dữ liệu
+  if (adviceList.length < 2) {
+    adviceList.push({
+      icon: "💬",
+      title: "Tương tác thực tế cùng bé",
+      desc: "Khi cùng bé sinh hoạt hàng ngày, ba mẹ hãy hỏi bé: 'Quả dưa hấu hình gì?', 'Đố con có mấy chiếc thìa trên bàn?' để liên hệ toán học vào đời sống.",
+    });
+  }
 
   return (
     <View style={styles.adviceContainer}>
       <View style={styles.adviceHeaderRow}>
         <Text style={styles.adviceSectionEmoji}>💡</Text>
-        <Text style={styles.adviceSectionTitle}>Lời khuyên cho Ba Mẹ</Text>
+        <Text style={styles.adviceSectionTitle}>Đánh giá & Lời khuyên cho Ba Mẹ</Text>
       </View>
       {adviceList.map((item, idx) => (
         <View key={idx} style={styles.adviceCard}>
